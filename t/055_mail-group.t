@@ -1,4 +1,4 @@
-# $Id: 055_mail-group.t,v 1.31.2.3 2011/01/18 23:14:53 ak Exp $
+# $Id: 055_mail-group.t,v 1.31.2.5 2011/02/02 02:31:42 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -50,7 +50,7 @@ my $Domains = {
 	'neighbor'	=> [],
 	'webmail'	=> [ qw(aol.com aol.jp gmail.com googlemail.com yahoo.com yahoo.co.jp 
 				hotmail.com windowslive.com mac.com me.com ovi.com excite.com
-				lycos.com lycosmail.com facebook.com myspace.com) ],
+				lycos.com lycosmail.com facebook.com myspace.com love.com ygm.com) ],
 	'smartphone'	=> [ qw(vertu.me) ],
 	'auwebmail'	=> [ qw( fastmail.net fastmail.fm ) ],
 	'brwebmail'	=> [ qw( bol.com.br ) ],
@@ -63,8 +63,9 @@ my $Domains = {
 	'ilwebmail'	=> [ qw( walla.co.il ) ],
 	'irwebmail'	=> [ qw( iran.ir ) ],
 	'jpcellphone'	=> [ qw( docomo.ne.jp ezweb.ne.jp softbank.ne.jp d.vodafone.ne.jp jp-k.ne.jp
-				vertuclub.ne.jp ido.ne.jp eza.ido.ne.jp sky.tu-ka.ne.jp ) ],
-	'jpsmartphone'	=> [ qw( i.softbank.jp docomo.blackberry.com emnet.ne.jp willcom.com ) ],
+				 vertuclub.ne.jp ido.ne.jp eza.ido.ne.jp sky.tu-ka.ne.jp ) ],
+	'jpsmartphone'	=> [ qw( i.softbank.jp docomo.blackberry.com emnet.ne.jp willcom.com
+				 bb.emobile.jp ) ],
 	'jpwebmail'	=> [ qw( auone.jp dwmail.jp mail.goo.ne.jp goo.jp infoseek.jp livedoor.com
 				 nifty.com nifmail.jp kitty.jp x-o.jp ) ],
 	'krwebmail'	=> [ qw( hanmail.net empas.com ) ],
