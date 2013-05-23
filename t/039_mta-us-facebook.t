@@ -1,4 +1,4 @@
-# $Id: 039_mta-us-facebook.t,v 1.1.2.1 2011/08/23 12:35:44 ak Exp $
+# $Id: 039_mta-us-facebook.t,v 1.1.2.3 2011/10/11 03:02:52 ak Exp $
 # -Id: 034_mta-google.t,v 1.2 2010/10/05 11:30:56 ak Exp -
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
@@ -19,8 +19,9 @@ use Test::More ( tests => 13 );
 #
 my $Test = new Kanadzuchi::Test(
 		'class' => q|Kanadzuchi::MTA::US::Facebook|,
-		'methods' => [ 'xsmtpagent', 'xsmtpcommand', 'xsmtpdiagnosis',
-				'xsmtpstatus', 'emailheaders', 'reperit', 'SMTPCOMMAND' ],
+		'methods' => [ 'xsmtpagent', 'xsmtpcommand', 'xsmtpdiagnosis', 
+				'xsmtprecipient', 'xsmtpcharset', 'xsmtpstatus', 
+				'emailheaders', 'reperit', 'SMTPCOMMAND' ],
 		'instance' => undef(),
 );
 my $Head = {
@@ -45,6 +46,8 @@ PREPROCESS: {
 		'->xsmtpdiagnosis() = X-SMTP-Diagnosis: Test' );
 	is( $Test->class->xsmtpstatus('5.1.1'), 'X-SMTP-Status: 5.1.1'.qq(\n),
 		'->xsmtpstatus() = X-SMTP-Status: 5.1.1' );
+	is( $Test->class->xsmtprecipient('user@example.jp'), 'X-SMTP-Recipient: user@example.jp'.qq(\n),
+		'->xsmtprecipient() = X-SMTP-Recipient: user@example.jp' );
 	isa_ok( $Test->class->emailheaders(), q|ARRAY|, '->emailheaders = []' );
 	isa_ok( $Test->class->SMTPCOMMAND(), q|HASH|, '->SMTPCOMMAND = {}' );
 

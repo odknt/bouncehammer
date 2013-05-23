@@ -1,4 +1,5 @@
-# $Id: Postfix.pm,v 1.6.2.3 2011/08/23 21:28:27 ak Exp $
+# $Id: Postfix.pm,v 1.6.2.7 2011/10/08 13:51:04 ak Exp $
+# Copyright (C) 2009-2011 Cubicroot Co. Ltd.
 # Kanadzuchi::MTA::
                                                
  #####                  ##    ###  ##          
@@ -67,7 +68,7 @@ my $RxErrors = {
 # ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub version { '2.1.3' };
+sub version { '2.1.5' };
 sub description { 'Postfix' };
 sub xsmtpagent { 'X-SMTP-Agent: Postfix'.qq(\n); }
 sub reperit
@@ -94,7 +95,7 @@ sub reperit
 	#   e.g.) From: MAILER-DAEMON (Mail Delivery System)
 	#         Subject: Undelivered Mail Returned to Sender
 	return q() unless( $mhead->{'subject'} =~ $RxPostfix->{'subject'} );
-	return q() unless( $mhead->{'from'} =~ $RxPostfix->{'from'} );
+	# return q() unless( $mhead->{'from'} =~ $RxPostfix->{'from'} );
 
 	my $phead = q();	# (String) Pseudo email header
 	my $pbody = q();	# (String) Pseudo body part
@@ -107,7 +108,7 @@ sub reperit
 	EACH_LINE: foreach my $el ( split( qq{\n}, $$mbody ) )
 	{
 		$endof = 1 if( $endof == 0 && $el =~ $RxPostfix->{'endof'} );
-		next() if( $endof || $el =~ m{\A--} || $el =~ m{\A\z} );
+		next() if $endof;
 
 		if( ( grep { $el =~ $_ } @{ $RxPostfix->{'begin'} }) .. ($el =~ $RxPostfix->{'endof'}) )
 		{
@@ -124,7 +125,7 @@ sub reperit
 			{
 				# <user@example.jp>: host mta.example.jp[192.0.2.44]
 				#    said: 550 Unknown user user@example.jp (in reply to RCPT TO command)
-				# last() if( $el =~ m{\A\z} || $el =~ m{\A--} );
+				$endof = 1 if( $el =~ m{\A\z} || $el =~ m{\A--} );
 				$rhostsaid .= q{ }.$el;
 				next();
 			}
@@ -141,6 +142,7 @@ sub reperit
 	#
 	$rhostsaid =~ y{ }{ }s;
 	$rhostsaid =~ s{--\d+[.]\d+/\w.+\z}{};
+	$rhostsaid =~ s{\A(.+[(]in reply to .*[A-Z]{4}.*command[)]).*\z}{$1};
 
 	if( $rhostsaid =~ m{[(][#]([45][.][0-7][.]\d+)[)]} || $rhostsaid =~ m{\b([45][.]\d+[.]\d+)\b} )
 	{

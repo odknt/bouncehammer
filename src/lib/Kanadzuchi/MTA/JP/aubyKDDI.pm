@@ -1,6 +1,7 @@
-# $Id: aubyKDDI.pm,v 1.6.2.5 2011/08/23 21:28:27 ak Exp $
+# $Id: aubyKDDI.pm,v 1.6.2.7 2011/10/07 06:23:15 ak Exp $
 # -Id: aubyKDDI.pm,v 1.1 2009/08/29 08:50:38 ak Exp -
 # -Id: aubyKDDI.pm,v 1.1 2009/07/31 09:04:51 ak Exp -
+# Copyright (C) 2009-2011 Cubicroot Co. Ltd.
 # Kanadzuchi::MTA::JP::
                                                             
                  ##              ##  ## ####   ####  ####   
@@ -20,7 +21,7 @@ use warnings;
 # ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub version { '2.1.5' };
+sub version { '2.1.6' };
 sub description { 'au by KDDI' };
 sub xsmtpagent { 'X-SMTP-Agent: JP::aubyKDDI'.qq(\n); }
 sub emailheaders
@@ -86,7 +87,7 @@ sub reperit
 		return $phead;
 	}
 
-	if( grep { $_ =~ m{\Afrom[ ]ezweb[.]ne[.]jp[ ]} } @{ $mhead->{'received'} } )
+	if( grep { $_ =~ m{\Afrom[ ](?:.+[.])?ezweb[.]ne[.]jp[ ]} } @{ $mhead->{'received'} } )
 	{
 		#    ____                         _                    _       
 		#   / __ \  ___ ______      _____| |__   _ __   ___   (_)_ __  
@@ -222,7 +223,7 @@ sub reperit
 
 		if( Kanadzuchi::RFC2822->is_emailaddress($rcptintxt) )
 		{
-			$phead .= q(Final-Recipient: RFC822; ).$rcptintxt.qq(\n);
+			$phead .= __PACKAGE__->xsmtprecipient($rcptintxt);
 		}
 
 		$pstat  = $statintxt || Kanadzuchi::RFC3463->status( $causa, $typemap->{ $causa }, 'i' );

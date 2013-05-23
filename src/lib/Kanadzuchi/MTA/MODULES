@@ -1,4 +1,4 @@
-# $Id: MODULES,v 1.1.2.5 2011/09/17 09:16:17 ak Exp $
+# $Id: MODULES,v 1.1.2.10 2011/10/11 04:56:35 ak Exp $
 # Copyright (C) 2011 Cubicroot Co. Ltd.
 package Kanadzuchi::MTA::MODULES;
 use strict;
@@ -20,10 +20,10 @@ sub standard {
 
 sub commercial {
 	return [ 
-		'JP::Activehunter', 'JP::InterScan', 'JP::mFILTER',
-		'US::AmazonSES', 'US::Exchange', 'US::IMailServer', 
-		'US::MailChimp', 'US::MailFoundry', 'US::SendGrid',
-		'US::SurfControl',
+		'Activehunter', 'AmazonSES', 'Domino', 'Exchange', 
+		'InterScan', 'IMailServer', 'MailFoundry', 'McAfee',
+		'mFILTER', 'MXLogic', 'Notes', 'SendGrid', 
+		'StarOffice21', 'SurfControl', 
 	];
 }
 

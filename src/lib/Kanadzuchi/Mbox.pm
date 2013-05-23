@@ -1,4 +1,4 @@
-# $Id: Mbox.pm,v 1.28.2.3 2011/08/23 21:29:53 ak Exp $
+# $Id: Mbox.pm,v 1.28.2.9 2011/10/11 03:03:18 ak Exp $
 # -Id: Parser.pm,v 1.10 2009/12/26 19:40:12 ak Exp -
 # -Id: Parser.pm,v 1.1 2009/08/29 08:50:27 ak Exp -
 # -Id: Parser.pm,v 1.4 2009/07/31 09:03:53 ak Exp -
@@ -27,6 +27,7 @@ use strict;
 use warnings;
 use Perl6::Slurp;
 use JSON::Syck;
+use Encode;
 use Kanadzuchi::MTA::Sendmail;
 use Kanadzuchi::MTA::Postfix;
 use Kanadzuchi::MTA::qmail;
@@ -106,7 +107,8 @@ sub postulat
 
 	# Experimental implementation for the future.
 	my $libmboxroot = '__KANADZUCHILIB__/Kanadzuchi/MTA';
-	my $iso3166list = [ 'User', 'JP', 'US' ];
+	my $additionals = [ 'User', 'Comm' ];
+	my $iso3166list = [ 'JP', 'US' ];
 	my $iso3166conf = '__KANADZUCHIETC__/available-countries';
 	my $countryconf = ( -r $iso3166conf && -s _ && -T _ ) ? JSON::Syck::LoadFile($iso3166conf) : {};
 	my $didfileload = keys %$countryconf ? 1 : 0;
@@ -157,6 +159,32 @@ sub postulat
 		closedir($dh);
 
 	} # End of foreach(EACH_COUNTRY)
+
+	ADDITIONALS: foreach my $amod ( @$additionals )
+	{
+		# Load user-defined modules and commercial MTA modules
+		my $directory = $libmboxroot.'/'.$amod;
+
+		next() unless( -d $directory && -r _ && -x _ );
+		opendir( my $dh, $directory );
+
+		READAM: while( my $de = readdir($dh) )
+		{
+			my $fp = $directory.'/'.$de;
+
+			# the file is not *.pm, nor regular file, nor readable
+			next(READAM) if( $fp !~ m{[.]pm\z} || ! -f $fp || ! -r _ );
+
+			$acclassname  = 'Kanadzuchi::MTA::'.$amod.'::'.$de;
+			$acclassname =~ s{[.]pm\z}{};
+
+			eval { require $fp; };
+			push( @$listofclass, $acclassname ) unless $@;
+		}
+
+		closedir($dh);
+
+	} # End of foreach(ADDITIONALS)
 
 	return $listofclass;
 }
@@ -323,9 +351,11 @@ sub parseit
 	# +-+-+-+-+-+-+-+
 	#
 	# @Description	Parse the email text
+	# @Param <ref>	(Integer) Flag for saving failed messages
 	# @Param <ref>	(Ref->Code) Callback function
 	# @Return	(Integer) n = The number of parsed messages
 	my $self = shift();
+	my $save = shift() || 0;
 	my $call = shift() || sub {};
 	my $ends = ENDOF;
 	my $seek = 0;
@@ -410,13 +440,19 @@ sub parseit
 		$_mail->{'body'} = __PACKAGE__->breakit( $_mail, \$_body );
 		$_head = q();
 
+		# 4. Save entire message
+		$_mail->{'data'} = $_email if $save;
 
 		# Parse message body
 		# Concatenate multiple-lined headers
 		next(PARSE_EMAILS) unless( $_mail->{'body'} );
 		$_mail->{'body'} =~ s{^[Ff]rom:[ ]*([^\n\r]+)[\n\r][ \t]+([^\n\r]+)}{From: $1 $2}gm;
 		$_mail->{'body'} =~ s{^[Tt]o:[ ]*([^\n\r]+)[\n\r][ \t]+([^\n\r]+)}{To: $1 $2}gm;
-		$_mail->{'body'} =~ s{^[Dd]iagnostic-[Cc]ode:[ ]*([^\n\r]+)[\n\r][ \t]+([^\n\r]+)}{Diagnostic-Code: $1 $2}gm;
+		$_mail->{'body'} =~ s{^[Dd]iagnostic-[Cc]ode:[\s]*([^\n\r]+)
+								[\n\r][\s\t]+([^\n\r]+)
+								[\n\r][\s\t]+([^\n\r]+)
+								[\n\r][\s\t]+([^\n\r]+) }
+					{Diagnostic-Code: $1 $2 $3 $4}gmx;
 
 		# Delete non-required headers
 		$_mail->{'body'} =~ y{\n}{\n}s;		# Delete blank lines
@@ -469,12 +505,11 @@ sub parseit
 		$_mail->{'body'} =~ s{^[Xx]-SMTP-Command:[ ]*(.+)$}{<<<<: X-SMTP-Command: $1}m;
 		$_mail->{'body'} =~ s{^[Xx]-SMTP-Diagnosis:[ ]*(.+)$}{<<<<: X-SMTP-Diagnosis: $1}m;
 		$_mail->{'body'} =~ s{^[Xx]-SMTP-Status:[ ]*(.+)$}{<<<<: X-SMTP-Status: $1}m;
+		$_mail->{'body'} =~ s{^[Xx]-SMTP-Recipient:[ ]*(.+)$}{<<<<: X-SMTP-Recipient: $1}m;
+		$_mail->{'body'} =~ s{^[Xx]-SMTP-Charset:[ ]*(.+)$}{<<<<: X-SMTP-Charset: $1}m;
 
 		$_mail->{'body'} =~ s{^\w.+[\r\n]}{}gm;			# Delete non-required headers
 		$_mail->{'body'} =~ s{^<<<<:\s}{}gm;			# Delete the mark
-
-		# Remove the string which includes multi-byte character
-		$_mail->{'body'} =~ s{^([Dd]iagnostic-[Cc]ode:[ ]X-Notes;).+$}{$1 MULTI-BYTE CHARACTERS HAVE BEEN REMOVED.}m;
 
 		# Missing From: header in the body part, See Kanadzuchi/Mail/Bounced.pm line 139 - 164
 		unless( $_mail->{'body'} =~ m{
@@ -495,6 +530,7 @@ sub parseit
 		}
 
 		push( @{ $self->{'messages'} }, {
+				'data' => $_mail->{'data'},
 				'from' => $_mail->{'from'},
 				'head' => $_mail->{'head'},
 				'body' => $_mail->{'body'}, } );

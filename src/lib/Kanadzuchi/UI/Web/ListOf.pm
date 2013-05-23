@@ -1,4 +1,4 @@
-# $Id: ListOf.pm,v 1.3.2.1 2011/08/23 21:28:57 ak Exp $
+# $Id: ListOf.pm,v 1.3.2.3 2011/10/11 10:39:23 ak Exp $
 # -Id: Summary.pm,v 1.1 2009/08/29 09:30:33 ak Exp -
 # -Id: Summary.pm,v 1.1 2009/08/18 02:37:53 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -64,8 +64,8 @@ sub listofcontents
 		# Load module list
 		eval {
 			require $rdirectory.'/MODULES';
-			$commercial = Kanadzuchi::MTA::MODULES->commercial();
 			$standardmm = Kanadzuchi::MTA::MODULES->standard();
+			$commercial = [ map { 'Comm::'.$_ } @{ Kanadzuchi::MTA::MODULES->commercial() } ];
 		};
 
 		# Find MTA Modules
@@ -104,6 +104,7 @@ sub listofcontents
 
 			if( grep { $mtamodule eq $_ } @$commercial )
 			{
+				$moduledata->{'name'} =~ s{\AComm::}{};
 				push( @$commodules, $moduledata );
 			}
 			else

@@ -1,4 +1,5 @@
-# $Id: qmail.pm,v 1.7.2.3 2011/08/23 21:28:27 ak Exp $
+# $Id: qmail.pm,v 1.7.2.6 2011/10/08 13:51:04 ak Exp $
+# Copyright (C) 2009-2011 Cubicroot Co. Ltd.
 # Kanadzuchi::MTA::
                          ##  ###    
   #####  ##  ##  ####         ##    
@@ -58,7 +59,7 @@ my $RxSMTPError = {
 
 my $RxqmailError = {
 	'userunknown' => [
-		qr{no mailbox here by that name[.]},
+		qr{no mailbox here by that name},
 	],
 	'mailboxfull' => [
 		qr{disk quota exceeded},
@@ -104,7 +105,7 @@ my $RxqmailError = {
 # ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub version { '2.1.3' };
+sub version { '2.1.4' };
 sub description { 'qmail' };
 sub xsmtpagent { 'X-SMTP-Agent: qmail'.qq(\n); }
 sub reperit
@@ -175,50 +176,45 @@ sub reperit
 	$rhostsaid =~ y{ }{}s;
 	$rhostsaid =~ s{\A }{}g;
 	$rhostsaid =~ s{ \z}{}g;
+	$rhostsaid =~ s{ [-]{2,}.+\z}{};
 
-	if( $rhostsaid =~ $RxQSBMF->{'sorry'} )
-	{
-		# The line which begins with the string 'Sorry,...'
-		$xsmtp = 'CONN';
-	}
-	else
-	{
-		DETECT:
+	# The line which begins with the string 'Sorry,...'
+	$xsmtp = 'CONN' if( $rhostsaid =~ $RxQSBMF->{'sorry'} );
+
+	DETECT: {
+		SMTP_ERROR: foreach my $e ( keys(%{ $RxSMTPError }) )
 		{
-			SMTP_ERROR: foreach my $e ( keys(%{ $RxSMTPError }) )
+			if( grep { $rhostsaid =~ $_ } @{ $RxSMTPError->{$e} } )
 			{
-				if( grep { $rhostsaid =~ $_ } @{ $RxSMTPError->{$e} } )
-				{
-					$xsmtp = uc $e;
-					last();
-				}
+				$xsmtp = uc $e;
+				last();
 			}
+		}
 
-			QMAIL_ERROR: foreach my $q ( keys(%{ $RxqmailError }) )
+		QMAIL_ERROR: foreach my $q ( keys(%{ $RxqmailError }) )
+		{
+			if( grep { $rhostsaid =~ $_ } @{ $RxqmailError->{$q} } )
 			{
-				if( grep { $rhostsaid =~ $_ } @{ $RxqmailError->{$q} } )
-				{
-					$causa = $q;
-					$xsmtp ||= 'DATA';
+				$causa = $q;
+				$xsmtp ||= 'DATA';
 
-					if( $q eq 'ldaperror' )
+				if( $q eq 'ldaperror' )
+				{
+					# qmail-ldap errors
+					# $xsmtp ||= 'RCPT';
+
+					# Mailaddress is administrativley disabled. (LDAP-ERR #220)
+					if( $rhostsaid =~ m{[ ][(]LDAP[-]ERR[ ][#]\d+[)]\z} )
 					{
-						# qmail-ldap errors
-						# $xsmtp ||= 'RCPT';
-
-						# Mailaddress is administrativley disabled. (LDAP-ERR #220)
-						if( $rhostsaid =~ m{[ ][(]LDAP[-]ERR[ ][#]\d+[)]\z} )
-						{
-							$causa = 'systemerror';
-						}
+						$causa = 'systemerror';
 					}
-					last(DETECT);
 				}
-				else
-				{
-					$causa ||= 'undefined';
-					$xsmtp ||= 'DATA';
-				}
+				last(DETECT);
+			}
+			else
+			{
+				$causa ||= 'undefined';
+				$xsmtp ||= 'DATA';
 			}
 		}
 	}
@@ -235,17 +231,20 @@ sub reperit
 		$pstat = Kanadzuchi::RFC3463->status( ( $causa || 'undefined' ), 'p', 'i' );
 	}
 
+	# Detect a recipient address from $rhostsaid
+	$rcptintxt = $1 if( $rhostsaid =~ m{[<](.+[@].+)[>]:} );
+
 	# Add the pseudo Content-Type header if it does not exist.
 	$mhead->{'content-type'} ||= q(message/delivery-status);
 
 	if( Kanadzuchi::RFC2822->is_emailaddress($rcptintxt) )
 	{
-		$phead .= q(Final-Recipient: RFC822; ).$rcptintxt.qq(\n);
+		$phead .= __PACKAGE__->xsmtprecipient($rcptintxt);
 	}
 	else
 	{
 		$rcptintxt = Kanadzuchi::Address->canonify($rhostsaid);
-		$phead .= q(Final-Recipient: RFC822; ).$rcptintxt.qq(\n) 
+		$phead .= __PACKAGE__->xsmtprecipient($rcptintxt)
 				if( Kanadzuchi::RFC2822->is_emailaddress($rcptintxt) );
 	}
 

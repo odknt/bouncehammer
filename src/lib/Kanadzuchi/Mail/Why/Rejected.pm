@@ -1,4 +1,4 @@
-# $Id: Rejected.pm,v 1.2 2010/12/12 06:19:35 ak Exp $
+# $Id: Rejected.pm,v 1.2.2.2 2011/10/11 03:03:55 ak Exp $
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi::Mail::Why::
                                                        
@@ -22,15 +22,10 @@ sub exemplaria
 {
 	my $class = shift();
 	return [ 
-		qr{dns lookup failure: .+ try again later},
-		qr{domain does not exist:},
+		# Rejected due to envelope from address
+		qr{address rejected},
 		qr{domain of sender address .+ does not exist},
-		qr{invalid domain, see [<]url:.+[>]},
-		qr{mail server at .+ is blocked},
-		qr{mx records for .+ violate section .+},
-		qr{rfc 1035 violation: recursive cname records for},
 		qr{sender rejected},
-		qr{sorry, your remotehost looks suspiciously like spammer},
 	];
 }
 
