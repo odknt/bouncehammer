@@ -1,4 +1,4 @@
-# $Id: RFC1893.pm,v 1.2 2010/06/03 07:00:02 ak Exp $
+# $Id: RFC1893.pm,v 1.5 2010/07/07 11:21:37 ak Exp $
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi::
                                                 
@@ -9,12 +9,6 @@
  ## ##  ##    ##  ##  ##  ##  ##     ## ##  ##  
  ##  ## ##     #### ###### ####   ####   ####   
 package Kanadzuchi::RFC1893;
-
-#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
-# ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
-# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
-#
 use strict;
 use warnings;
 
@@ -80,25 +74,6 @@ my $InternalCode = {
 # ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub code2int
-{
-	# +-+-+-+-+-+-+-+-+
-	# |c|o|d|e|2|i|n|t|
-	# +-+-+-+-+-+-+-+-+
-	#
-	# @Description	D.S.N. code -> integer, e.g.) 5.1.2 -> 512
-	# @Param <str>	(String) D.S.N.
-	# @Return	(Integer) n = Integer
-	#		(Integer) 0 = Missing argv or invalid d.s.n
-	my $class = shift();
-	my $dsnsc = shift() || return(0);
-	my $intsc = 0;
-
-	# $x =~ y{[0-9]}{}dc;
-	$intsc = $1.$2.$3 if( $dsnsc =~ m{\A([245])[.](\d)[.](\d)\z} );
-	return($intsc);
-}
-
 sub int2code
 {
 	# +-+-+-+-+-+-+-+-+
@@ -110,11 +85,11 @@ sub int2code
 	# @Return	(String) D.S.N.
 	#		(String) Empty = Invalid number
 	my $class = shift();
-	my $intsc = shift() || return(q{});
-	my $dsnsc = q{};
+	my $intsc = shift() || return q();
+	my $dsnsc = q();
 
 	$dsnsc = $1.q{.}.$2.q{.}.$3 if( $intsc =~ m{\A([245])(\d)(\d)\z} );
-	return($dsnsc);
+	return $dsnsc;
 }
 
 sub standardcode

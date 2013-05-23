@@ -1,4 +1,4 @@
-# $Id: Yahoo.pm,v 1.1 2010/04/01 08:06:18 ak Exp $
+# $Id: Yahoo.pm,v 1.3 2010/07/07 11:21:51 ak Exp $
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi::Mail::Bounced::
                                               
@@ -11,20 +11,14 @@
 
 # http://help.yahoo.co.jp/help/jp/mail/in_trouble/in_trouble-27.html
 package Kanadzuchi::Mail::Bounced::Yahoo;
-
-#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
-# ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
-# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
-#
 use base 'Kanadzuchi::Mail::Bounced';
 use strict;
 use warnings;
 
-#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
-# ||P |||u |||b |||l |||i |||c |||       |||M |||e |||t |||h |||o |||d |||s ||
-# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
+# ||I |||n |||s |||t |||a |||n |||c |||e |||       |||M |||e |||t |||h |||o |||d |||s ||
+# ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 sub is_filtered
 {
@@ -61,7 +55,7 @@ sub is_filtered
 			}
 		}
 	}
-	return($isfi);
+	return $isfi;
 }
 
 sub is_userunknown
@@ -105,7 +99,7 @@ sub is_userunknown
 			$isuu = 1 if( $self->is_permerror() || $stat == Kanadzuchi::RFC1893->internalcode($subj) );
 		}
 	}
-	return($isuu);
+	return $isuu;
 }
 
 sub is_mailboxfull
@@ -142,7 +136,7 @@ sub is_mailboxfull
 			$ismf = 1 if( $stat == Kanadzuchi::RFC1893->internalcode($subj) );
 		}
 	}
-	return($ismf);
+	return $ismf;
 }
 
 1;

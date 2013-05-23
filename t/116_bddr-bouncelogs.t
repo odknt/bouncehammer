@@ -1,4 +1,4 @@
-# $Id: 116_bddr-bouncelogs.t,v 1.1 2010/05/17 00:00:56 ak Exp $
+# $Id: 116_bddr-bouncelogs.t,v 1.8 2010/07/11 09:20:38 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -8,15 +8,15 @@ use lib qw(./t/lib ./dist/lib ./src/lib);
 use strict;
 use warnings;
 use Kanadzuchi::Test;
-use Test::More ( tests => 872 );
+use Test::More ( tests => 1313 );
 
 #  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 # ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
 # ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
 #
-my $Methods = [ 'new', '_is_validid', 'is_validcolumn', 'count', 'search',
-		'insert', 'update', 'disableit' ];
+my $Methods = [ 'new', 'is_validid', 'is_validcolumn', 'size', 'count',
+		'groupby', 'search', 'insert', 'update', 'disable', 'remove' ];
 
 my $Class = q|Kanadzuchi::BdDR::BounceLogs::Table|;
 my $Klass = q|Kanadzuchi::BdDR::BounceLogs|;
@@ -26,21 +26,19 @@ my $Klass = q|Kanadzuchi::BdDR::BounceLogs|;
 # ||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
 #
-can_ok( $Class, @$Methods );
 
 SKIP: {
-	my $howmanyskips = 871;
+	my $howmanyskips = 1313;
 	eval { require DBI; }; skip( 'Because no DBI for testing', $howmanyskips ) if( $@ );
 	eval { require DBD::SQLite; }; skip( 'Because no DBD::SQLite for testing', $howmanyskips ) if( $@ );
 
-	use Kanadzuchi::Test::DBI;
-	use Kanadzuchi::BdDR;
-	use Kanadzuchi::BdDR::Page;
-	use Kanadzuchi::BdDR::BounceLogs;
-	use Kanadzuchi::BdDR::BounceLogs::Masters;
-	use Kanadzuchi::Metadata;
-	use JSON::Syck;
-	use Time::Piece;
+	require Kanadzuchi::Test::DBI;
+	require Kanadzuchi::BdDR;
+	require Kanadzuchi::BdDR::Page;
+	require Kanadzuchi::BdDR::BounceLogs;
+	require Kanadzuchi::BdDR::BounceLogs::Masters;
+	require Kanadzuchi::Metadata;
+	require Time::Piece;
 
 	my $Btable = undef();
 	my $Mtable = undef();
@@ -50,6 +48,8 @@ SKIP: {
 	my $Temp = {};
 	my $Data = [];
 	my $JSON = undef();
+
+	can_ok( $Class, @$Methods );
 
 	CONNECT: {
 
@@ -128,6 +128,7 @@ SKIP: {
 		my $record = 2;		# + 2 example records
 		my $thisid = 0;
 		my $origin = {};
+		my $groupd = {};
 
 		$Page->resultsperpage(1e3);
 
@@ -142,6 +143,7 @@ SKIP: {
 
 			COUNT: {
 				is( $Btable->count(), $record, '->count() = '.$record );
+				is( $Btable->size(), $record, '->size() = '.$record );
 			}
 
 			SEARCH: {
@@ -178,28 +180,83 @@ SKIP: {
 				$entity = shift @{ $Btable->search( { 'token' => $_e->{'token'} }, $Page ) };
 				is( $entity->{'reason'}, 'unstable', 'new reason = unstable' );
 				is( $entity->{'hostgroup'}, 'neighbor', 'new hostgroup = neighbor' );
-				is( $entity->{'addresser'}, $origin->{'addresser'}, 'addresser:'.$origin->{'addresser'}.'is not updated' );
+				is( $entity->{'addresser'}, $origin->{'addresser'}, 'addresser:'.$origin->{'addresser'}.' is not updated' );
 			}
 
-			DISABLEIT: {
-				$thisid = $Btable->disableit( { 'token' => $_e->{'token'} } );
-				ok( $thisid, '->disableit(token='.$_e->{'token'}.')' );
+			DISABLE: {
+				$thisid = $Btable->disable( { 'token' => $_e->{'token'} } );
+				ok( $thisid, '->disable(token='.$_e->{'token'}.')' );
 
 				$entity = shift @{ $Btable->search( { 'token' => $_e->{'token'} }, $Page ) };
 				is( $entity->{'disabled'}, 1, 'disabled = 1' );
-				is( $entity->{'recipient'}, $origin->{'recipient'}, 'recipient'.$origin->{'recipient'}.'is not updated' );
+				is( $entity->{'recipient'}, $origin->{'recipient'}, 'recipient:'.$origin->{'recipient'}.' is not updated' );
 			}
 
-			SEARCH_AGAIN: {
-				is( $Btable->count( { 'disabled' => 1 } ), $record - 2, '->count(disabled) = '.$record );
+
+			SEARCH_AGAIN1: {
+				is( $Btable->count( { 'disabled' => 1 } ), 1, '->count(disabled) = 1' );
 
 				$Page->resultsperpage(10);
 				$Page->set($record);
 
 				$entity = $Btable->search( { 'disabled' => 1 }, $Page );
-				is( scalar(@$entity), $record < 12 ? $record - 2 : 10 );
+				is( scalar(@$entity), 1 );
 			}
 
+			ENABLE: {
+				$thisid = $Btable->update( { 'disabled' => 0 }, { 'id' => $_e->{'id'} } );
+				ok( $thisid, '->update(disable=0,id='.$thisid.')' );
+			}
+
+			#$record--;
+		}
+
+
+		GROUP_BY: {
+			foreach my $column ( qw{senderdomain destination hostgroup provider reason addresser } )
+			{
+				$groupd = $Btable->groupby($column);
+				isa_ok( $groupd, q|ARRAY| );
+
+				foreach my $_e ( @$groupd )
+				{
+					like( $_e->{'name'}, qr{\A[a-z]}, 'name = '.$_e->{'name'} );
+					ok( ( $_e->{'size'} > -1 ), 'size = '.$_e->{'size'} );
+					ok( ( $_e->{'freq'} > 0 ), 'freq = '.$_e->{'freq'} );
+				}
+			}
+
+			CANNOT_AGGREGATE: {
+				$groupd = $Btable->groupby( 'token' );
+				isa_ok( $groupd, q|ARRAY| );
+				is( scalar( @$groupd ), 0 );
+			}
+		}
+
+		LOOP_FOR_DELETE: foreach my $_e ( @$Data )
+		{
+			REMOVE: {
+				if( ( $_e->{'id'} % 3 ) == 0 )
+				{
+					$thisid = $Btable->remove( { 'id' => $_e->{'id'}, 'token' => $_e->{'token'} } );
+					ok( $thisid, '->remove(id='.$_e->{'id'}.',token='.$_e->{'token'}.') = '.$thisid );
+				}
+				elsif( ( $_e->{'id'} % 3 ) == 1 )
+				{
+					$thisid = $Btable->remove( { 'id' => $_e->{'id'} } );
+					ok( $thisid, '->remove(id='.$_e->{'id'}.' = '.$thisid );
+				}
+				elsif( ( $_e->{'id'} % 3 ) == 2 )
+				{
+					$thisid = $Btable->remove( { 'token' => $_e->{'token'} } );
+					ok( $thisid, '->remove(token='.$_e->{'token'}.') = '.$thisid );
+				}
+			}
+
+			SEARCH_AGAIN2: {
+				$entity = $Btable->search( { 'token' => $_e->{'token'} }, $Page );
+				is( scalar(@$entity), 0, 'record = 0 (removed)' );
+			}
 		}
 	}
 

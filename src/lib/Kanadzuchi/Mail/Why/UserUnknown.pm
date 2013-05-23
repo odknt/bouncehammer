@@ -1,54 +1,54 @@
-# $Id: UserUnknown.pm,v 1.4 2010/04/02 11:42:26 ak Exp $
+# $Id: UserUnknown.pm,v 1.8 2010/07/07 01:06:29 ak Exp $
 # -Id: UserUnknown.pm,v 1.1 2009/08/29 07:33:28 ak Exp -
 # -Id: UserUnknown.pm,v 1.2 2009/05/11 08:22:29 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi::Mail::Why::
-                                                                                 
- ##  ##                       ##  ##         ##                                  
- ##  ##   #####  ####  #####  ##  ##  #####  ##     #####   ####  ##  ## #####   
- ##  ##  ##     ##  ## ##  ## ##  ##  ##  ## ## ##  ##  ## ##  ## ##  ## ##  ##  
- ##  ##   ####  ###### ##     ##  ##  ##  ## ####   ##  ## ##  ## ###### ##  ##  
- ##  ##      ## ##     ##     ##  ##  ##  ## ## ##  ##  ## ##  ## ###### ##  ##  
-  ####   #####   ####  ##      ####   ##  ## ##  ## ##  ##  ####  ##  ## ##  ##  
+                                                                                
+ ##  ##                      ##  ##         ##                                  
+ ##  ##  #####  ####  #####  ##  ##  #####  ##     #####   ####  ##  ## #####   
+ ##  ## ##     ##  ## ##  ## ##  ##  ##  ## ## ##  ##  ## ##  ## ##  ## ##  ##  
+ ##  ##  ####  ###### ##     ##  ##  ##  ## ####   ##  ## ##  ## ###### ##  ##  
+ ##  ##     ## ##     ##     ##  ##  ##  ## ## ##  ##  ## ##  ## ###### ##  ##  
+  ####  #####   ####  ##      ####   ##  ## ##  ## ##  ##  ####  ##  ## ##  ##  
 package Kanadzuchi::Mail::Why::UserUnknown;
-
-#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
-# ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
-# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
-#
 use base 'Kanadzuchi::Mail::Why';
 
-#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
-# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
-# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
+#  ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
+# ||C |||l |||a |||s |||s |||       |||M |||e |||t |||h |||o |||d |||s ||
+# ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 # Regular expressions of 'User Unknown'
-$Patterns = [
-	qr(user unknown\z)o,
-	qr(no such mailbox)o,
-	qr(no such user here)o,
-	qr(destination server rejected recipients)o,
-	qr(recipient address rejected: user unknown in relay recipient table)o,
-	qr(recipient address rejected: user unknown in local recipient table)o,
-	qr(recipient address rejected: user unknown in virtual mailbox table)o,
-	qr(recipient address rejected: user unknown in virtual alias table)o,
-	qr(recipient address rejected: user .+ does not exist)o,
-	qr(recipient address rejected: unknown user)o,
-	qr(recipient address rejected: invalid user)o,
-	qr(delivery error: dd this user doesn[']?t have a )o,
-	qr(sorry, user unknown)o,
-	qr(sorry, no mailbox here by that name)o,
-	qr(mailbox not present)o,
-	qr(requested action not taken: mailbox unavailable)o,
-	qr(recipient rejected: mailbox would exceed maximum allowed storage)o,
-	qr(recipient is not local)o,
-	qr(unknown address)o,
-	qr(unknown recipient)o,
-	qr([#]5[.]1[.]1 bad address)o,
-	qr(said: 550[-\s]5[.]1[.]1[ ].+[ ]user[ ]unknown[ ])o,
-];
+sub exemplaria
+{
+	my $class = shift();
+	return [
+		qr{[#]5[.]1[.]1 bad address},
+		qr{invalid recipient:},
+		qr{no such mailbox},
+		qr{no such user here},
+		qr{no such user!},
+		qr{delivery error: dd this user doesn[']?t have a },
+		qr{destination server rejected recipients},
+		qr{mailbox not present},
+		qr{recipient address rejected: invalid user},
+		qr{recipient address rejected: user .+ does not exist},
+		qr{recipient address rejected: user unknown in relay recipient table},
+		qr{recipient address rejected: user unknown in local recipient table},
+		qr{recipient address rejected: user unknown in virtual mailbox table},
+		qr{recipient address rejected: user unknown in virtual alias table},
+		qr{recipient address rejected: unknown user},
+		qr{recipient is not local},
+		qr{requested action not taken: mailbox unavailable},
+		qr{said: 550[-\s]5[.]1[.]1[ ].+[ ]user[ ]unknown[ ]},
+		qr{sorry, user unknown},
+		qr{sorry, no mailbox here by that name},
+		qr{unknown address},
+		qr{unknown recipient},
+		qr{unknown user},
+		qr{user unknown},
+	];
+}
 
 1;
 __END__

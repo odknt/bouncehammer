@@ -1,4 +1,4 @@
-# $Id: Profile.pm,v 1.8 2010/05/18 07:30:03 ak Exp $
+# $Id: Profile.pm,v 1.11 2010/07/11 06:48:03 ak Exp $
 # -Id: Profile.pm,v 1.2 2009/08/31 06:58:25 ak Exp -
 # -Id: Profile.pm,v 1.3 2009/08/17 06:54:30 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -11,30 +11,27 @@
  ##     ##     ##  ##  ##    ##   ##  ##      
  ##     ##      ####   ##   #### ####  ####   
 package Kanadzuchi::UI::Web::Profile;
-
-#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
-# ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
-# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
-#
+use base 'Kanadzuchi::UI::Web';
 use strict;
 use warnings;
-use base 'Kanadzuchi::UI::Web';
 
 #  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
 # ||I |||n |||s |||t |||a |||n |||c |||e |||       |||M |||e |||t |||h |||o |||d |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub profile_ontheweb
+sub systemprofile
 {
-	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	# |p|r|o|f|i|l|e|_|o|n|t|h|e|w|e|b|
-	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	# +-+-+-+-+-+-+-+-+-+-+-+-+-+
+	# |s|y|s|t|e|m|p|r|o|f|i|l|e|
+	# +-+-+-+-+-+-+-+-+-+-+-+-+-+
 	#
-	# @Description	Draw profile in HTML
+	# @Description	System profile page
 	my $self = shift();
-	my $file = 'profile.'.$self->{'language'}.'.html';
+	my $file = 'profile.html';
+	my $time = q();
+
+	eval { $time = qx|uptime|; };
 
 	$self->tt_params(
 		'sysconfig' => $self->{'sysconfig'},
@@ -42,12 +39,12 @@ sub profile_ontheweb
 		'systemname' => $Kanadzuchi::SYSNAME,
 		'sysconfpath' => $self->param('cf'),
 		'webconfpath' => $self->param('wf'),
-		'sysuptime' => qx(uptime),
+		'sysuptime' => $time,
 		'scriptengine' => $ENV{'MOD_PERL'} || 'CGI',
 		'serversoftware' => $ENV{'SERVER_SOFTWARE'} || 'Unknown',
 		'serverhost' => $ENV{'SERVER_NAME'}.':'.$ENV{'SERVER_PORT'},
 	);
-	$self->tt_process($file);
+	return $self->tt_process($file);
 }
 
 1;

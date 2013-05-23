@@ -1,4 +1,4 @@
-# $Id: 181_api-http.t,v 1.3 2010/06/08 00:59:45 ak Exp $
+# $Id: 181_api-http.t,v 1.7 2010/07/12 17:54:56 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -8,7 +8,7 @@ use lib qw(./t/lib ./dist/lib ./src/lib);
 use strict;
 use warnings;
 use Kanadzuchi::Test;
-use Test::More ( tests => 1 );
+use Test::More ( tests => 5 );
 
 #  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 # ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -18,7 +18,7 @@ use Test::More ( tests => 1 );
 my $T = new Kanadzuchi::Test(
 	'class' => q|Kanadzuchi::API::HTTP|,
 	'methods' => [ 'cgiapp_init', 'setup', 'cgiapp_prerun', 'cgiapp_postrun',
-			'teardown', 'loadconfig', 'api_empty', 'api_query', 'exception' ],
+			'teardown', 'loadconfig', 'empty', 'exception' ],
 	'instance' => undef(),
 );
 
@@ -36,11 +36,21 @@ SKIP: {
 		require CGI::Application::Plugin::HTMLPrototype;
 	};
 
-	skip( 'CGI::Application::* is not installed', scalar 1 ) if( $@ );
+	skip( 'CGI::Application::* is not installed', 1 ) if( $@ );
 
-	use Kanadzuchi::API::HTTP;
+	require Kanadzuchi::API::HTTP;
 	PREPROCESS: {
 		can_ok( $T->class(), @{$T->methods()} );
+	}
+
+	require Kanadzuchi::API::HTTP::Select;
+	require Kanadzuchi::API::HTTP::Search;
+	PREPROCESS: {
+		can_ok( 'Kanadzuchi::API::HTTP::Select', @{$T->methods()} );
+		can_ok( 'Kanadzuchi::API::HTTP::Select', 'select' );
+
+		can_ok( 'Kanadzuchi::API::HTTP::Search', @{$T->methods()} );
+		can_ok( 'Kanadzuchi::API::HTTP::Search', 'search' );
 	}
 }
 

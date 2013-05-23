@@ -1,4 +1,4 @@
-# $Id: Test.pm,v 1.20 2010/05/25 23:54:44 ak Exp $
+# $Id: Test.pm,v 1.22 2010/07/11 06:48:03 ak Exp $
 # -Id: Test.pm,v 1.1 2009/08/29 09:30:33 ak Exp -
 # -Id: Test.pm,v 1.10 2009/08/17 12:39:31 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -29,32 +29,33 @@ use Time::Piece;
 # ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub test_ontheweb
+sub puttestform
 {
-	# +-+-+-+-+-+-+-+-+-+-+-+-+-+
-	# |t|e|s|t|_|o|n|t|h|e|w|e|b|
-	# +-+-+-+-+-+-+-+-+-+-+-+-+-+
+	# +-+-+-+-+-+-+-+-+-+-+-+
+	# |p|u|t|t|e|s|t|p|a|g|e|
+	# +-+-+-+-+-+-+-+-+-+-+-+
 	#
-	# @Description	Draw test(parse) form in HTML
+	# @Description	Test pagsing page
 	# @Param	<None>
 	# @Return
 	my $self = shift();
-	my $file = 'test.'.$self->{'language'}.'.html';
-	$self->tt_params( 'maxsize' => $self->{'webconfig'}->{'upload'}->{'maxsize'} );
-	$self->tt_process($file);
+	my $file = 'test.html';
+	$self->tt_params( 
+		'maxsize' => $self->{'webconfig'}->{'upload'}->{'maxsize'} );
+	return $self->tt_process($file);
 }
 
-sub parse_ontheweb
+sub onlineparser
 {
-	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	# |p|a|r|s|e|_|o|n|t|h|e|w|e|b|
-	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	# +-+-+-+-+-+-+-+-+-+-+-+-+
+	# |o|n|l|i|n|e|p|a|r|s|e|r|
+	# +-+-+-+-+-+-+-+-+-+-+-+-+
 	#
-	# @Description	Execute test parse on the web.
+	# @Description	Execute test parsing on the web.
 	# @Param	<None>
 	# @Return
 	my $self = shift();
-	my $file = 'iframe-parseddata.'.$self->{'language'}.'.html';
+	my $file = 'iframe-parseddata.html';
 	my $cgiq = $self->query();
 	my $data = [];
 
@@ -135,12 +136,11 @@ sub parse_ontheweb
 		# Check the size of email text
 		$errortitle = 'nosize' if( $sizeofmail == 0 );
 		$errortitle = 'toobig' if( $maxtxtsize > 0 && length($datasource) > $maxtxtsize );
-
+		$self->e( $errortitle ) if( $errortitle );
 
 		SLURP_AND_EAT: while(1)
 		{
 			last() if( $errortitle );
-
 			my $temporaryd = ( -w '/tmp' ? '/tmp' : File::Spec->tmpdir() );
 			my $counter4id = 0;
 
@@ -189,7 +189,7 @@ sub parse_ontheweb
 				# |_____/ /   | |/ ___ \| |  | | |___  | | | |_| |___) | |_| | |\  |
 				#      /_/    |_/_/   \_\_|  |_|_____| | |  \___/|____/ \___/|_| \_|
 				#                                      |_|                          
-				# Create serialized data for the format YAML or JSON
+				# Create serialized data for the format YAML or JSON, CSV
 				require Kanadzuchi::Log;
 				my $kanazcilog = Kanadzuchi::Log->new();
 
@@ -330,10 +330,9 @@ sub parse_ontheweb
 			'onlineparse' => 1,
 			'onlineupdate' => $registerit,
 			'updateresult' => $execstatus,
-			'parseerror' => $errortitle, );
+			'parseerror' => $errortitle );
+		return $self->tt_process($file);
 	}
-
-	$self->tt_process($file);
 }
 
 1;

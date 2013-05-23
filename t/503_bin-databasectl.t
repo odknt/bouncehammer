@@ -1,4 +1,4 @@
-# $Id: 503_bin-databasectl.t,v 1.8 2010/05/24 16:53:28 ak Exp $
+# $Id: 503_bin-databasectl.t,v 1.12 2010/07/11 09:20:39 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -7,27 +7,25 @@
 use lib qw(./t/lib ./dist/lib ./src/lib);
 use strict;
 use warnings;
-use Test::More ( tests => 450 );
-
-my $Skip = 450;	# How many skips
+use Test::More ( tests => 504 );
 
 SKIP: {
+	my $Skip = 504;	# How many skips
 	eval{ require IPC::Cmd; }; 
 	skip('Because no IPC::Cmd for testing',$Skip) if($@);
 
 	eval { require DBI; }; skip( 'Because no DBI for testing', $Skip ) if( $@ );
 	eval { require DBD::SQLite; }; skip( 'Because no DBD::SQLite for testing', $Skip ) if( $@ );
 
-	use Kanadzuchi::Test::CLI;
-	use Kanadzuchi::Test::DBI;
-	use Kanadzuchi;
-	use Kanadzuchi::Mail;
-	use Kanadzuchi::BdDR;
-	use Kanadzuchi::BdDR::Page;
-	use Kanadzuchi::BdDR::BounceLogs;
-	use Kanadzuchi::BdDR::BounceLogs::Masters;
-	use JSON::Syck;
-	use File::Copy;
+	require Kanadzuchi::Test::CLI;
+	require Kanadzuchi::Test::DBI;
+	require Kanadzuchi;
+	require Kanadzuchi::Mail;
+	require Kanadzuchi::BdDR;
+	require Kanadzuchi::BdDR::Page;
+	require Kanadzuchi::BdDR::BounceLogs;
+	require Kanadzuchi::BdDR::BounceLogs::Masters;
+	require File::Copy;
 
 	#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 	# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -109,6 +107,8 @@ SKIP: {
 		my $dresult = undef();
 		my $thisent = {};
 		my $yamlobj = undef();
+		my $idnumis = 0;
+		my $tokenis = q();
 
 		NON_EXISTENT_LOG_DATE: {
 
@@ -194,8 +194,8 @@ SKIP: {
 
 			$thisent = $yamlobj->{'status'}->{'cache'}->{'positive'}->{'mastertables'};
 			is( $thisent->{'addressers'}, 2, '(1) cache->matertables->addressers = 2' );
-			is( $thisent->{'senderdomains'}, 19, '(1) cache->matertables->senderdomains = 19' );
-			is( $thisent->{'destinations'}, 14, '(1) cache->matertables->destinations = 14' );
+			is( $thisent->{'senderdomains'}, 20, '(1) cache->matertables->senderdomains = 20' );
+			is( $thisent->{'destinations'}, 13, '(1) cache->matertables->destinations = 13' );
 			is( $thisent->{'providers'}, 24, '(1) cache->matertables->providers = 24' );
 		}
 
@@ -238,16 +238,16 @@ SKIP: {
 			$thisent = $yamlobj->{'status'};
 			is( $thisent->{'record'}, $Recs, '(3) status->record = '.$Recs );
 			is( $thisent->{'insert'}, 0, '(3) status->insert = 0' );
-			is( $thisent->{'update'}, 18, '(3) status->update = 18' );
+			is( $thisent->{'update'}, 19, '(3) status->update = 19' );
 
 			$thisent = $yamlobj->{'status'}->{'skipped'};
 			is( $thisent->{'no-senderdomain'}, 1, '(3) skipped->no-senderdomain = 1' );
-			is( $thisent->{'too-old-or-same'}, 18, '(3) skipped->too-old-or-same = 18' );
+			is( $thisent->{'too-old-or-same'}, 17, '(3) skipped->too-old-or-same = 17' );
 			is( $thisent->{'is-whitelisted'}, 0, '(3) skipped->is-whitelisted = 0' );
 			is( $thisent->{'exceeds-limit'}, 0, '(3) skipped->exceeds-limit = 0' );
 
 			$thisent = $yamlobj->{'status'}->{'cache'}->{'positive'};
-			is( $thisent->{'bouncelogs'}, 54, '(3) cache->bouncelogs = 54' );
+			is( $thisent->{'bouncelogs'}, 55, '(3) cache->bouncelogs = 55' );
 
 			$thisent = $yamlobj->{'status'}->{'cache'}->{'positive'}->{'mastertables'};
 			is( $thisent->{'addressers'}, 0, '(3) cache->matertables->addressers = 0' );
@@ -311,6 +311,153 @@ SKIP: {
 			is( $thisent->{'senderdomains'}, 0, '(5) cache->matertables->senderdomains = 0' );
 			is( $thisent->{'destinations'}, 0, '(5) cache->matertables->destinations = 0' );
 			is( $thisent->{'providers'}, 0, '(5) cache->matertables->providers = 0' );
+		}
+
+		DISABLE_AND_DELETE_FROM_CONSOLE_WITH_BATCHMODE1: {
+			$tokenis = '0f9085b0dce9bf7d107eb36cd5c65195';
+			$dresult = $Btab->search( { 'token' => $tokenis }, $Page );
+			$idnumis = $dresult->[0]->{'id'};
+
+			# Disable
+			$command = $Test->perl().$Test->command().$Opts.q{ --batch --disable --id }.$idnumis;
+			$xresult = qx($command);
+			$yamlobj = JSON::Syck::Load($xresult);
+
+			isa_ok( $yamlobj, q|HASH|, '--batch returns YAML(HASH)' );
+
+			foreach my $_sk ( 'user', 'command', 'load' )
+			{
+				ok( $yamlobj->{$_sk}, $_sk.' = '.$yamlobj->{$_sk} );
+			}
+
+			ok( $yamlobj->{'time'}->{'started'}, 'time->started = '.$yamlobj->{'time'}->{'started'} );
+			ok( $yamlobj->{'time'}->{'ended'}, 'time->ended = '.$yamlobj->{'time'}->{'ended'} );
+			ok( $yamlobj->{'time'}->{'elapsed'} > -1, 'time->elapsed = '.$yamlobj->{'time'}->{'elapsed'} );
+
+			$thisent = $yamlobj->{'status'};
+			is( $thisent->{'disable'}, 1, '(1) status->disable = 1' );
+
+			$dresult = $Btab->search( { 'id' => $idnumis, 'disabled' => 1 }, $Page );
+			ok( scalar(@$dresult), '->disable->search() = '.scalar(@$dresult).' record' );
+
+			# Remove
+			$command = $Test->perl().$Test->command().$Opts.q{ --batch --remove --id }.$idnumis;
+			$xresult = qx($command);
+			$yamlobj = JSON::Syck::Load($xresult);
+
+			isa_ok( $yamlobj, q|HASH|, '--batch returns YAML(HASH)' );
+
+			foreach my $_sk ( 'user', 'command', 'load' )
+			{
+				ok( $yamlobj->{$_sk}, $_sk.' = '.$yamlobj->{$_sk} );
+			}
+
+			ok( $yamlobj->{'time'}->{'started'}, 'time->started = '.$yamlobj->{'time'}->{'started'} );
+			ok( $yamlobj->{'time'}->{'ended'}, 'time->ended = '.$yamlobj->{'time'}->{'ended'} );
+			ok( $yamlobj->{'time'}->{'elapsed'} > -1, 'time->elapsed = '.$yamlobj->{'time'}->{'elapsed'} );
+
+			$thisent = $yamlobj->{'status'};
+			is( $thisent->{'remove'}, 1, '(1) status->remove = 1' );
+
+			$dresult = $Btab->search( { 'id' => $idnumis }, $Page );
+			is( scalar(@$dresult), 0, '->remove->search() = 0' );
+		}
+
+		DISABLE_AND_DELETE_FROM_CONSOLE_WITH_BATCHMODE2: {
+			# Disable
+			$tokenis = 'be1464c00a0ba88dffc3637697780213';
+			$command = $Test->perl().$Test->command().$Opts.q{ --batch --disable --token }.$tokenis;
+			$xresult = qx($command);
+			$yamlobj = JSON::Syck::Load($xresult);
+
+			isa_ok( $yamlobj, q|HASH|, '--batch returns YAML(HASH)' );
+
+			foreach my $_sk ( 'user', 'command', 'load' )
+			{
+				ok( $yamlobj->{$_sk}, $_sk.' = '.$yamlobj->{$_sk} );
+			}
+
+			ok( $yamlobj->{'time'}->{'started'}, 'time->started = '.$yamlobj->{'time'}->{'started'} );
+			ok( $yamlobj->{'time'}->{'ended'}, 'time->ended = '.$yamlobj->{'time'}->{'ended'} );
+			ok( $yamlobj->{'time'}->{'elapsed'} > -1, 'time->elapsed = '.$yamlobj->{'time'}->{'elapsed'} );
+
+			$thisent = $yamlobj->{'status'};
+			is( $thisent->{'disable'}, 1, '(2) status->disable = 1' );
+
+			$dresult = $Btab->search( { 'token' => $tokenis, 'disabled' => 1 }, $Page );
+			ok( scalar(@$dresult), '->disable->search() = '.scalar(@$dresult).' record' );
+
+			# Remove
+			$command = $Test->perl().$Test->command().$Opts.q{ --batch --remove --token }.$tokenis;
+			$xresult = qx($command);
+			$yamlobj = JSON::Syck::Load($xresult);
+
+			isa_ok( $yamlobj, q|HASH|, '--batch returns YAML(HASH)' );
+
+			foreach my $_sk ( 'user', 'command', 'load' )
+			{
+				ok( $yamlobj->{$_sk}, $_sk.' = '.$yamlobj->{$_sk} );
+			}
+
+			ok( $yamlobj->{'time'}->{'started'}, 'time->started = '.$yamlobj->{'time'}->{'started'} );
+			ok( $yamlobj->{'time'}->{'ended'}, 'time->ended = '.$yamlobj->{'time'}->{'ended'} );
+			ok( $yamlobj->{'time'}->{'elapsed'} > -1, 'time->elapsed = '.$yamlobj->{'time'}->{'elapsed'} );
+
+			$thisent = $yamlobj->{'status'};
+			is( $thisent->{'remove'}, 1, '(2) status->remove = 1' );
+
+			$dresult = $Btab->search( { 'token' => $tokenis }, $Page );
+			is( scalar(@$dresult), 0, '->remove->search() = 0' );
+		}
+
+		DISABLE_AND_DELETE_FROM_CONSOLE_WITH_BATCHMODE3: {
+			$tokenis = '3f173ec3d365066d43ba1b126fe689fc';
+			$dresult = $Btab->search( { 'token' => $tokenis }, $Page );
+			$idnumis = $dresult->[0]->{'id'};
+
+			# Disable
+			$command = $Test->perl().$Test->command().$Opts.q{ --batch --disable --token }.$tokenis.q{ --id }.$idnumis;
+			$xresult = qx($command);
+			$yamlobj = JSON::Syck::Load($xresult);
+
+			isa_ok( $yamlobj, q|HASH|, '--batch returns YAML(HASH)' );
+
+			foreach my $_sk ( 'user', 'command', 'load' )
+			{
+				ok( $yamlobj->{$_sk}, $_sk.' = '.$yamlobj->{$_sk} );
+			}
+
+			ok( $yamlobj->{'time'}->{'started'}, 'time->started = '.$yamlobj->{'time'}->{'started'} );
+			ok( $yamlobj->{'time'}->{'ended'}, 'time->ended = '.$yamlobj->{'time'}->{'ended'} );
+			ok( $yamlobj->{'time'}->{'elapsed'} > -1, 'time->elapsed = '.$yamlobj->{'time'}->{'elapsed'} );
+
+			$thisent = $yamlobj->{'status'};
+			is( $thisent->{'disable'}, 1, '(3) status->disable = 1' );
+
+			$dresult = $Btab->search( { 'id' => $idnumis, 'token' => $tokenis, 'disabled' => 1 }, $Page );
+			ok( scalar(@$dresult), '->disable->search() = '.scalar(@$dresult).' record' );
+
+			# Remove
+			$command = $Test->perl().$Test->command().$Opts.q{ --batch --remove --token }.$tokenis.q{ --id }.$idnumis;
+			$xresult = qx($command);
+			$yamlobj = JSON::Syck::Load($xresult);
+
+			isa_ok( $yamlobj, q|HASH|, '--batch returns YAML(HASH)' );
+
+			foreach my $_sk ( 'user', 'command', 'load' )
+			{
+				ok( $yamlobj->{$_sk}, $_sk.' = '.$yamlobj->{$_sk} );
+			}
+
+			ok( $yamlobj->{'time'}->{'started'}, 'time->started = '.$yamlobj->{'time'}->{'started'} );
+			ok( $yamlobj->{'time'}->{'ended'}, 'time->ended = '.$yamlobj->{'time'}->{'ended'} );
+			ok( $yamlobj->{'time'}->{'elapsed'} > -1, 'time->elapsed = '.$yamlobj->{'time'}->{'elapsed'} );
+
+			$thisent = $yamlobj->{'status'};
+			is( $thisent->{'remove'}, 1, '(3) status->remove = 1' );
+
+			$dresult = $Btab->search( { 'id' => $idnumis, 'token' => $tokenis }, $Page );
+			is( scalar(@$dresult), 0, '->remove->search() = 0' );
 		}
 
 	} # End of EXEC_COMMAND

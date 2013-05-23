@@ -1,4 +1,4 @@
-# $Id: 500_bin-mailboxparser.t,v 1.20 2010/05/25 04:48:03 ak Exp $
+# $Id: 500_bin-mailboxparser.t,v 1.23 2010/07/11 09:20:39 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -7,16 +7,16 @@
 use lib qw(./t/lib ./dist/lib ./src/lib);
 use strict;
 use warnings;
-use Test::More ( tests => 91 );
+use Test::More ( tests => 93 );
 
 SKIP: {
+	my $howmanyskips = 93;
 	eval{ require IPC::Cmd; }; 
-	skip('Because no IPC::Cmd for testing',91) if($@);
+	skip( 'Because no IPC::Cmd for testing', $howmanyskips ) if($@);
 
-	use Kanadzuchi::Test::CLI;
-	use Kanadzuchi;
-	use JSON::Syck;
-	use File::Basename;
+	require Kanadzuchi::Test::CLI;
+	require Kanadzuchi;
+	require File::Basename;
 
 	#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 	# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -86,6 +86,11 @@ SKIP: {
 		{
 			'name' => 'Format is ASCIITable, -Fa',
 			'option' => $O.q( -Fa ),
+			'count' => 0,
+		},
+		{
+			'name' => 'Format is CSV, -Fc',
+			'option' => $O.q( -Fc ),
 			'count' => 0,
 		},
 		{

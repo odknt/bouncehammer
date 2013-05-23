@@ -1,4 +1,4 @@
-# $Id: WebMail.pm,v 1.7 2010/05/24 16:55:06 ak Exp $
+# $Id: WebMail.pm,v 1.14 2010/06/16 08:15:16 ak Exp $
 # -Id: AOL.pm,v 1.1 2009/08/29 07:33:21 ak Exp -
 # -Id: Google.pm,v 1.1 2009/08/29 07:33:22 ak Exp -
 # -Id: Hotmail.pm,v 1.1 2009/08/29 07:33:22 ak Exp -
@@ -14,131 +14,98 @@
  ######  ##     ##  ## ##  ##  ##  ##   ##   ##    
  ##  ##   ####  #####  ##  ##   #####  #### ####   
 package Kanadzuchi::Mail::Group::WebMail;
-
-#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
-# ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
-# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
-#
+use base 'Kanadzuchi::Mail::Group';
 use strict;
 use warnings;
-use base 'Kanadzuchi::Mail::Group';
-
-#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
-# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
-# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
-#
-# Major company's Webmail domains(World wide)
-#  * http://en.wikipedia.org/wiki/Webmail
-#  * http://en.wikipedia.org/wiki/Comparison_of_webmail_providers
-my $domains = {
-	'aol' => [
-		qr{(?>\A(?:aol|aim)[.]com\z)},		# AOL; America OnLine
-		qr{(?>\Aaol[.](?:de|fr|in|jp|nl|se)\z)},
-		qr{(?>\Aaol[.](?:co[.]uk|com[.]br)\z)},
-		qr{(?>\Anetscape[.]net\z)},
-	],
-	'microsoft' => [
-		qr{(?>\Amsn[.]com\z)},			# Windows Live Hotmail http://www.hotmail.com/
-		qr{(?>\Amsnhotmail[.]com\z)},
-		qr{(?>\Awindowslive[.]com\z)},
-		qr{(?>\Ahotmail[.](?:com|fr|it|de|es|jp|se)\z)},
-		qr{(?>\Ahotmail[.]co[.](?:jp|uk|th)\z)},
-		qr{(?>\Ahotmail[.]com[.](?:ar|tr|br)\z)},
-		qr{(?>\Alive[.](?:com|at|be|ca|cl|cn|de|dk|fr|hk|ie|it|jp|nl|no|ru|se)\z)},
-		qr{(?>\Alive[.]co[.](?:kr|za|uk)\z)},
-		qr{(?>\Alive[.]com[.](?:ar|au|my|mx|sg)\z)},
-	],
-	'yahoo' => [
-		# Yahoo! Mail; http://world.yahoo.com/
-		# http://promo.mail.yahoo.co.jp/collabo/
-		qr{(?>\Ayahoo[.]com\z)},
-		qr{(?>\Ayahoo[.]com[.](?:ar|au|br|cn|hk|kr|my|mx|no|ph|ru|sg|es|se|tw)\z)},
-		qr{(?>\Ayahoo[.](?:at|ba|ca|de|dk|es|fr|gr|ie|it|kr|ru|se|tw)\z)},
-		qr{(?>\Ayahoo[.]co[.](?:in|jp|kr|ru|th|tw|uk)\z)},
-		qr{(?>\A(?:ymail|rocketmail)[.]com\z)},					# From 2008/06/19
-		qr{(?>\Ailove-(?:mickey|minnie|pooh|stitch|tinkerbell)[.]jp\z)},	# From 2009/12/01
-		qr{(?>\Agamba[-]fan[.]jp\z)},
-		qr{(?>\Ahawks[-]fan[.]jp\z)},
-		qr{(?>\Ay[-]fmarinos[.]com\z)},						# From 2010/02/17
-	],
-	'runet' => [
-		qr{(?>\A(?:mail|bk|inbox|list)[.]ru\z)},# mobileme, http://mail.ru/
-	],
-	'apple' => [
-		qr{(?>\A(?:mac|me)[.]com\z)},		# mobileme, http://me.com/
-	],
-	'google' => [
-		qr{(?>\Agmail[.]com\z)},		# GMail http://mail.google.com/mail/
-		qr{(?>\Agooglemail[.]com\z)},		# GMail in U.K. and Germany
-	],
-	'nokia' => [
-		qr{(?>\Aovi[.]com\z)},			# Ovi by Nokia, http://www.ovi.com/
-	],
-};
-
-my $classes = {
-	'aol' => 'Generic',
-	'microsoft' => 'Generic',
-	'yahoo' => 'Yahoo',
-	'runet' => 'Generic',
-	'apple' => 'Generic',
-	'google' => 'Generic',
-	'nokia' => 'Generic',
-};
 
 #  ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
 # ||C |||l |||a |||s |||s |||       |||M |||e |||t |||h |||o |||d |||s ||
 # ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub detectus
+# Major webmail provider's domains in The World
+#  * http://en.wikipedia.org/wiki/Webmail
+#  * http://en.wikipedia.org/wiki/Comparison_of_webmail_providers
+sub nominisexemplaria
 {
-	# +-+-+-+-+-+-+-+-+
-	# |d|e|t|e|c|t|u|s|
-	# +-+-+-+-+-+-+-+-+
-	#
-	# @Description	Detect and load the class for the domain
-	# @Param <str>	(String) Domain part
-	# @Return	(Ref->Hash) Class, Group, Provider name or Empty string
 	my $class = shift();
-	my $dpart = shift() || return({});
-	my $mdata = { 'class' => q(), 'group' => q(), 'provider' => q(), };
+	return {
+		'aol' => [
+			# AOL; America OnLine
+			qr{\Aaim[.](?:com|net)\z},
+			qr{\Aaol[.](?:com|be|ch|cl|de|dk|es|fi|fr|hk|in|it|jp|kr|nl|pl|ru|se|tw)\z},
+			qr{\Aaol[.]co[.](?:nz|uk)\z},
+			qr{\Aaol[.]com[.](?:ar|au|br|co|mx|ve)\z},
+			qr{\Anetscape[.]net\z},
+		],
+		'apple' => [
+			# mobileme, http://me.com/
+			qr{\A(?:mac|me)[.]com\z},
+		],
+		'excite' => [
+			# http://excite.com/
+			qr{\Aexcite[.](?:com|co[.]jp)\z},
+		],
+		'google' => [
+			# GMail http://mail.google.com/mail/
+			qr{\Agmail[.]com\z},
+			qr{\Agmail[.](?:bj|cf|ge|ie|lu|re|ug)\z},
 
-	foreach my $d ( keys(%$domains) )
-	{
-		if( grep { $dpart =~ $_ } @{$domains->{$d}} )
-		{
-			$mdata->{'class'} = $Kanadzuchi::Mail::Group::ClassName.q{::}.$classes->{$d};
-			$mdata->{'group'} = 'webmail';
-			$mdata->{'provider'} = $d;
-			require $Kanadzuchi::Mail::Group::ClassPath.'/'.$classes->{$d}.'.pm';
-			last();
-		}
-	}
+			# GMail in U.K. and Germany
+			qr{\Agooglemail[.]com\z},
+		],
+		'lycos' => [
+			# http://www.lycos.com/
+			qr{\Alycos(?:mail)?[.]com\z},
+		],
+		'microsoft' => [
+			# Windows Live Hotmail http://www.hotmail.com/
+			qr{\Amsn[.](?:com|mv)\z},
+			qr{\A(?:hotmail|live|msnhotmail)[.]com\z},
+			qr{\Awindowslive[.](?:com|ez)\z},
+			qr{\Ahotmail[.](?:ac|as|at|bb|be|bs|ca|ch|cl|cz|de|dk|es|fi|fr|gr|hk|hu)\z},
+			qr{\Ahotmail[.](?:it|la|lt|lu|lv|ly|mn|mw|my|nl|no|ph|pn|pt|rs|se|sg|sh|sk|vu)\z},
+			qr{\Ahotmail[.]co[.](?:at|id|il|in|jp|kr|nz|pn|th|ug|uk|za)\z},
+			qr{\Ahotmail[.]com[.](?:ar|au|bo|br|hk|my|ph|pl|sg|tr|tt|tw|vn)\z},
+			qr{\Alive[.](?:at|be|ca|ch|cl|cn|de|dk|fi|fr|hk|ie|in|it|jp|nl|no|ph|ru|se)\z},
+			qr{\Alive[.]co[.](?:in|kr|uk|za)\z},
+			qr{\Alive[.]com[.](?:ar|au|co|mx|my|pe|ph|pk|pt|sg|ve)\z},
+		],
+		'nokia' => [
+			# Ovi by Nokia, http://www.ovi.com/
+			qr{\Aovi[.]com\z},
+		],
+		'yahoo' => [
+			# Yahoo! Mail; http://world.yahoo.com/
+			qr{\Ayahoo[.]com\z},
+			qr{\Ayahoo[.](?:at|ca|cl|cn|de|dk|es|fr|gr|ie|in|it|jp|no|pl|ro|se)\z},
+			qr{\Ayahoo[.]com[.](?:ar|au|br|cn|co|hk|mx|my|pe|ph|sg|tr|tw|ve|vn)\z},
+			qr{\Ayahoo[.]co[.](?:hu|id|in|jp|kr|nz|th|uk)\z},
+			qr{\A(?:ymail|rocketmail)[.]com\z},		# From 2008/06/19
 
-	return($mdata);
+			# http://promo.mail.yahoo.co.jp/collabo/
+			# From 2009/12/01
+			qr{\Ailove-(?:mickey|minnie|pooh|stitch|tinkerbell)[.]jp\z},
+			qr{\Agamba[-]fan[.]jp\z},
+			qr{\Ahawks[-]fan[.]jp\z},
+			qr{\Ay[-]fmarinos[.]com\z},		# From 2010/02/17
+		],
+	};
 }
 
-sub is_webmail
+sub classisnomina
 {
-	# +-+-+-+-+-+-+-+-+-+-+
-	# |i|s|_|w|e|b|m|a|i|l|
-	# +-+-+-+-+-+-+-+-+-+-+
-	#
-	# @Description	Whether addr is webmail or not
-	# @Param	<None>
-	# @Return	(Integer) 1 = is webmail
-	#		(Integer) 0 = is not webmail
 	my $class = shift();
-	my $dpart = shift() || return(0);
-
-	foreach my $d ( keys(%$domains) )
-	{
-		return(1) if( grep { $dpart =~ $_ } @{$domains->{$d}} );
-	}
-	return(0);
+	return {
+		'aol'		=> 'Generic',
+		'apple'		=> 'Generic',
+		'excite'	=> 'Generic',
+		'google'	=> 'Generic',
+		'lycos'		=> 'Generic',
+		'nokia'		=> 'Generic',
+		'microsoft'	=> 'Generic',
+		'yahoo'		=> 'Yahoo',
+	};
 }
 
 1;

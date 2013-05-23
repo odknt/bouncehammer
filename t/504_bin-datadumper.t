@@ -1,4 +1,4 @@
-# $Id: 504_bin-datadumper.t,v 1.12 2010/05/17 00:00:56 ak Exp $
+# $Id: 504_bin-datadumper.t,v 1.18 2010/07/11 09:20:39 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -7,26 +7,25 @@
 use lib qw(./t/lib ./dist/lib ./src/lib);
 use strict;
 use warnings;
-use Test::More ( tests => 346 );
+use Test::More ( tests => 426 );
 
-my $Skip = 346;	# How many skips
 
 SKIP: {
+	my $Skip = 426;	# How many skips
 	eval{ require IPC::Cmd; }; 
 	skip('Because no IPC::Cmd for testing',$Skip) if($@);
 
 	eval { require DBI; }; skip( 'Because no DBI for testing', $Skip ) if( $@ );
 	eval { require DBD::SQLite; }; skip( 'Because no DBD::SQLite for testing', $Skip ) if( $@ );
 
-	use Kanadzuchi::Test::CLI;
-	use Kanadzuchi::Test::DBI;
-	use Kanadzuchi;
-	use Kanadzuchi::BdDR;
-	use Kanadzuchi::BdDR::Cache;
-	use Kanadzuchi::BdDR::BounceLogs;
-	use Kanadzuchi::BdDR::BounceLogs::Masters;
-	use Kanadzuchi::Mail::Stored::YAML;
-	use JSON::Syck;
+	require Kanadzuchi::Test::CLI;
+	require Kanadzuchi::Test::DBI;
+	require Kanadzuchi;
+	require Kanadzuchi::BdDR;
+	require Kanadzuchi::BdDR::Cache;
+	require Kanadzuchi::BdDR::BounceLogs;
+	require Kanadzuchi::BdDR::BounceLogs::Masters;
+	require Kanadzuchi::Mail::Stored::YAML;
 
 	#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 	# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -46,7 +45,7 @@ SKIP: {
 			'database' => q(/tmp/bouncehammer-test.db),
 			'tempdir' => q(./.test),
 	);
-	my $File = '././examples/hammer.1970-01-01.ffffffff.000000.tmp';
+	my $File = './examples/hammer.1970-01-01.ffffffff.000000.tmp';
 	my $Yaml = undef();
 	my $Yobj = [];
 	my $Recs = 37;
@@ -81,17 +80,17 @@ SKIP: {
 		{
 			'name' => 'Dump by HostGroup',
 			'option' => ' --hostgroup cellphone',
-			'count' => 13,
+			'count' => 12,
 		},
 		{
 			'name' => 'Dump by Provider',
 			'option' => ' --provider various',
-			'count' => 5,
+			'count' => 4,
 		},
 		{
 			'name' => 'Dump by Reason',
 			'option' => ' --reason filtered',
-			'count' => 5,
+			'count' => 4,
 		},
 		{
 			'name' => 'Dump by Message Token',
@@ -206,7 +205,7 @@ SKIP: {
 		}
 
 		DUMP: {
-			foreach my $f ( 'yaml', 'json' )
+			foreach my $f ( 'yaml', 'json', 'csv' )
 			{
 				my $command = q();
 				my $xresult = q();
@@ -219,41 +218,51 @@ SKIP: {
 					NORMAL_SELECT: {
 						$command = $Test->perl().$Test->command().$Opts.$_t->{'option'}.' --format '.$f;
 						$xresult = qx($command);
-						$yamlobj = JSON::Syck::Load( $xresult );
 						ok( length($xresult), $_t->{'name'}.' length() = '.length($xresult) );
+
+						next() if( $f eq 'csv' );
+						$yamlobj = JSON::Syck::Load( $xresult );
 						is( scalar(@$yamlobj), $_t->{'count'}, $_t->{'name'}.' '.$_t->{'option'} );
 					}
 
 					ORDERBY: {
-						$command = $Test->perl().$Test->command().$Opts.$_t->{'option'}.' --orderby bounced --fotmat'.$f;
-						$yamlobj = JSON::Syck::Load( $xresult );
+						$command = $Test->perl().$Test->command().$Opts.$_t->{'option'}.' --orderby bounced --format '.$f;
+						$xresult = qx($command);
 						ok( length($xresult), $_t->{'name'}.' length() = '.length($xresult) );
+
+						next() if( $f eq 'csv' );
+						$yamlobj = JSON::Syck::Load( $xresult );
 						is( scalar(@$yamlobj), $_t->{'count'}, $_t->{'name'}.' '.$_t->{'option'}.' --orderby bounced' );
 					}
 
 					ORDERBY_DESC: {
 						$command = $Test->perl().$Test->command().$Opts.$_t->{'option'}.' --orderbydesc bounced --format '.$f;
-						$yamlobj = JSON::Syck::Load( $xresult );
+						$xresult = qx($command);
 						ok( length($xresult), $_t->{'name'}.' length() = '.length($xresult) );
-						is( scalar(@$yamlobj), $_t->{'count'}, 
-							$_t->{'name'}.' '.$_t->{'option'}.' --orderbydesc bounced' );
+
+						next() if( $f eq 'csv' );
+						$yamlobj = JSON::Syck::Load( $xresult );
+						is( scalar(@$yamlobj), $_t->{'count'}, $_t->{'name'}.' '.$_t->{'option'}.' --orderbydesc bounced' );
 					}
 
 					WITH_COMMENT: {
 						$command = $Test->perl().$Test->command().$Opts.$_t->{'option'}.' --comment --format '.$f;
 						$xresult = qx($command);
-						last() unless( length($xresult) );
+
+						next() unless( length($xresult) );
 						ok( ( length($xresult) - $Comm->{'y'} ), $_t->{'name'}.' with comment' );
 					}
 
 					COUNT_ONLY: {
 						$command = $Test->perl().$Test->command().$Opts.$_t->{'option'}.' --count --format '.$f;
-						$yamlobj = JSON::Syck::Load( $xresult );
-						is( scalar(@$yamlobj),, $_t->{'count'}, $_t->{'name'}.' '.$_t->{'option'}.' --count' );
+						$xresult = qx($command);
+						chomp($xresult);
+
+						is( $xresult, $_t->{'count'}, $_t->{'name'}.' '.$_t->{'option'}.' --count' );
 					}
 
 					OTHER_INVALID_FORMAT_CHARACTER: {
-						foreach my $i ( 'c', 's', 'p' )
+						foreach my $i ( 'x', 's', 'p' )
 						{
 							$command = $Test->perl().$Test->command().$Opts.$_t->{'option'}.' -F'.$i;
 							$xstatus = scalar(IPC::Cmd::run( 'command' => $command ));

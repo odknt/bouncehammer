@@ -1,11 +1,11 @@
 dnl #                                               -*- Autoconf -*-
 dnl # Process this file with autoconf to produce a configure script.
-dnl # $Id: configure.ac,v 1.35 2010/06/08 19:17:19 ak Exp $
+dnl # $Id: configure.ac,v 1.59 2010/07/12 14:23:56 ak Exp $
 dnl # -Id: configure.ac,v 1.8 2009/12/01 10:35:23 ak Exp -
 dnl # -Id: configure.ac,v 1.35 2009/08/27 05:09:04 ak Exp -
 dnl # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 AC_PREREQ(2.61)
-AC_INIT([BounceHammer], [2.3.3], [bugs@bouncehammer.jp])
+AC_INIT([BounceHammer], [2.4.0], [bugs@bouncehammer.jp])
 AM_INIT_AUTOMAKE([foreign])
 AC_PREFIX_DEFAULT(/usr/local/bouncehammer)
 AC_CANONICAL_HOST
@@ -138,28 +138,55 @@ AC_CONFIG_FILES([Makefile
                  src/cgi/Makefile
                  src/etc/Makefile
                  src/lib/Kanadzuchi/API/Makefile
+                 src/lib/Kanadzuchi/API/HTTP/Makefile
                  src/lib/Kanadzuchi/Archive/Makefile
                  src/lib/Kanadzuchi/BdDR/BounceLogs/Makefile
                  src/lib/Kanadzuchi/BdDR/Makefile
                  src/lib/Kanadzuchi/Config/Makefile
                  src/lib/Kanadzuchi/Mail/Bounced/Makefile
+                 src/lib/Kanadzuchi/Mail/Bounced/JP/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/AU/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/BR/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/CA/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/CN/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/CZ/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/DE/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/EG/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/IN/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/IL/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/IR/Makefile
                  src/lib/Kanadzuchi/Mail/Group/JP/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/KR/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/LV/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/NO/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/NZ/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/RU/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/SG/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/TW/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/UK/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/US/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/ZA/Makefile
                  src/lib/Kanadzuchi/Mail/Group/Makefile
                  src/lib/Kanadzuchi/Mail/Makefile
                  src/lib/Kanadzuchi/Mail/Stored/Makefile
                  src/lib/Kanadzuchi/Mail/Why/Makefile
                  src/lib/Kanadzuchi/Makefile
-                 src/lib/Kanadzuchi/Mbox/Makefile
+                 src/lib/Kanadzuchi/MTA/Makefile
+                 src/lib/Kanadzuchi/MTA/JP/Makefile
                  src/lib/Kanadzuchi/MIME/Makefile
+                 src/lib/Kanadzuchi/Statistics/Makefile
+                 src/lib/Kanadzuchi/Statistics/Stored/Makefile
                  src/lib/Kanadzuchi/UI/Makefile
                  src/lib/Kanadzuchi/UI/Web/Makefile
                  src/lib/Makefile
                  src/libexec/Makefile
                  src/sql/Makefile
                  template/Makefile
+                 template/l10n/Makefile
+                 template/l10n/en/Makefile
+                 template/l10n/ja/Makefile
                  template/standard/Makefile
                  template/standard/element/Makefile
-                 template/standard/help/Makefile
                  template/standard/javascript/Makefile
                  template/standard/page/Makefile
                  template/standard/stylesheet/Makefile])

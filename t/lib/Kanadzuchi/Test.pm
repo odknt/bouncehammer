@@ -1,4 +1,4 @@
-# $Id: Test.pm,v 1.4 2010/02/22 03:20:25 ak Exp $
+# $Id: Test.pm,v 1.6 2010/07/11 09:20:41 ak Exp $
 # Kanadzuchi::
                                
  ######                  ##    
@@ -20,6 +20,7 @@ use strict;
 use warnings;
 use base 'Class::Accessor::Fast::XS';
 use Path::Class;
+use JSON::Syck;
 
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||A |||c |||c |||e |||s |||s |||o |||r |||s ||
@@ -62,6 +63,7 @@ our $ZeroValues = [ 0, 0.0, 00_00, -0, +0, 0e0, 0e1, 0e-1, 0b0000,
 	0x0, 00, 000, 0000, 0<<0, 0<<1, 0>>0, 0>>1, 0%1, "0",
 	'0', q( ), qq( ),
 ];
+our $NegativeValues = [ -1, -2, -1e1, -1e2 ];
 
 # See http://en.wikipedia.org/wiki/ASCII
 our $EscapeCharacters = [ "\a", "a\b", "\t", "\n", "\f", "\r", "\0","\e", ];

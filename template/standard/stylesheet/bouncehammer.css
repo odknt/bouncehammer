@@ -1,4 +1,4 @@
-/* $Id: bouncehammer.css,v 1.11 2010/05/25 23:53:08 ak Exp $ */
+/* $Id: bouncehammer.css,v 1.19 2010/07/11 06:48:32 ak Exp $ */
 /* Copyright 2009,2010 Cubicroot Co. Ltd. */
 
 /* IDs */
@@ -48,9 +48,6 @@
 #Central-Ward {
 	margin: 0 128px 0 144px;
 	padding: 8px 8px;
-	border-style: dotted;
-	border-width: 0 0 0 1px;
-	border-color: #d4dcd6;	/* Sobakiri-iro */
 	z-index: 20;
 }
 
@@ -129,7 +126,7 @@ body {
 h1 {
 	margin: 0;
 	padding: 0;
-	color: #3e62ad; /* Kakitsubata */
+	color: #0095d9; /* Ao */
 	font-size: 20px;
 	font-family: 'Gill Sans Lite', 'Century Gothic', Verdana, 'Trebuchet MS';
 	border-style: solid;
@@ -142,7 +139,7 @@ h2 {
 	padding: 0 0 0 3px;
 	font-size: 16px;
 	font-family: 'Trebuchet MS', Verdana;
-	color: #544a47; /* Kurotsurubami */
+	color: #1e50a2; /* Ruri-iro */
 }
 
 h3 {}
@@ -154,7 +151,7 @@ h4 {
 	font-family: 'Gill Sans Lite', 'Century Gothic', Verdana, 'Trebuchet MS';
 	text-align: center;
 	color: #524e4d; /* Keshizumi-iro */
-	background: #dddcd6; /* Kinunezu */
+	background: #e5e4e6; /* Shiraumenezu */
 }
 
 h5 {}
@@ -206,27 +203,6 @@ a:visited {
 	text-decoration: none; 
 }
 
-span.baguette {
-	padding: 2px 8px;
-	color: #afafb0; /* Gin-nezu */
-	background: #383c3c; /* Youkan-iro */
-	border-color: #2b2b2b;	/* Rou-iro */
-	border-style: solid;
-	border-width: 1px;
-	-webkit-border-radius: 12px;
-	-moz-border-radius: 12px;
-	-opera-border-radius: 12px;
-}
-
-span.baguette a:link, span.baguette a:visited {
-	color: #afafb0; /* Gin-nezu */
-}
-
-span.baguette a:hover, span.baguette a:hover:visited {
-	text-decoration: none;
-	color: #89c3eb; /* Wasurenagusa-iro */
-}
-
 input.wide { /* Wide input field */
 	margin: 2px 0 2px 0;
 	padding: 4px;
@@ -238,7 +214,12 @@ input.wide { /* Wide input field */
 	-opera-border-radius: 4px;
 }
 
+input.wide:focus {
+	border-color: #2ca9e1; /* Ama-iro */
+}
+
 span.flatbutton, input.flatbutton {
+	width: 80px;
 	margin: 2px;
 	padding: 2px 4px;
 	color: #727171; /* Nibi-iro */
@@ -273,6 +254,16 @@ input.flatbutton {
 	color: #595857; /* Sumi */
 }
 
+span.longflatbutton {
+	width: 108px;
+	height: 13px;
+	margin: 4px;
+	padding: 2px;
+	vertical-align: middle;
+	text-align: center;
+	display: block;
+}
+
 span.flatbutton:hover {
 	border-color: #727171; /* Nibi-iro */
 	color: #007bbb; /* Kompeki */
@@ -281,6 +272,10 @@ span.flatbutton:hover {
 input.flatbutton:hover {
 	border-color: #595857; /* Sumi */
 	color: #007bbb; /* Kompeki */
+}
+
+input.caution:hover {
+	color: #e2041b; /* Shoujouhi */
 }
 
 input.flatbutton[disabled], input.flatbutton[disabled]:hover {
@@ -293,6 +288,9 @@ input.flatbutton[disabled], input.flatbutton[disabled]:hover {
 	color: #007bbb; /* Kompeki */
 	text-decoration: none; 
 }
+.caution a:hover, .caution a:visited:hover {
+	color: #e2041b; /* Shoujouhi */
+}
 
 
 /* Index items in West-Ward */
@@ -304,17 +302,23 @@ ul.index {
 	list-style-type: none;
 }
 
-ul.index li.item {
+ul.index li.item, ul.index li.itemgroup {
 	width: 130px;
 	margin: 2px 0;
 	padding: 2px 2px 2px 8px;
 	display: block;
 }
 
-ul.index li.item:hover,
-ul.index li.subitem:hover {
+li.itemgroup {
+	color: #44617b; /* Kon-nezu */
 	font-weight: bold;
-	background: #e5e4e6; /* Shiraumenezu */
+}
+
+ul.index li.item:hover,
+ul.index li.subitem:hover,
+ul.index li.itemgroup:hover {
+	font-weight: bold;
+	background: #eaf4fc; /* Geppaku */
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	-opera-border-radius: 4px;
@@ -323,7 +327,7 @@ ul.index li.subitem:hover {
 ul.index li.subitem {
 	width: 122px;
 	margin: 2px 0;
-	padding: 2px 2px 2px 16px;
+	padding: 2px 2px 2px 1.8em;
 	display: block;
 }
 
@@ -335,7 +339,7 @@ ul.index a:link {
 
 ul.index a:hover, ul.index a:visited:hover {
 	color: #007bbb; /* Kompeki */
-	background: #e5e4e6; /* Shiraumenezu */
+	background: #eaf4fc; /* Geppaku */
 	text-decoration: none; 
 }
 
@@ -401,30 +405,47 @@ div.result {
 	padding: 0px;
 }
 
-div.result p.exception {
-	margin: 4px;
-	padding: 4px;
-	background: #e2041b; /* Shoujouhi */
-	color: #fffffc; /* Gofun-iro */
+/* Exception, Error */
+.excephead, .errorhead {
 	font-weight: bold;
+	margin: 4px 0;
+}
+.excephead { color: #e2041b; /* Shoujouhi */ }
+.errorhead { color: #d9333f; /* Beniaka */ }
+
+div.exception, div.errormessage {
+	margin: 4px 1px;
+	padding: 4px;
+	font-size: 11px;
+	background: #e83929; /* Masoo */
+	color: #fffffc; /* Gofun-iro */
+	border-color: #e2041b; /* Shoujouhi */
+	border-width: 1px;
+	border-style: solid;
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	-opera-border-radius: 4px;
 }
 
 div.errormessage {
-	margin: 4px 1px;
-	padding: 4px;
-	background: #e2041b; /* Shoujouhi */
-	color: #fffffc; /* Gofun-iro */
-	font-size: 11px;
-	font-weight: bold;
-	text-align: left;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
-	-opera-border-radius: 4px;
+	background: #fdeff2; /* Usuzakura */
+	color: #281a14; /* Tetsuguro */
+	border-color: #e2041b; /* Shoujouhi */
 }
 
-/* Other text */
-span.errortext		{ color: #cc0000; }
+div.exception p, div.errormessage p {
+	margin: 0;
+	padding: 0;
+}
+
+.errortext	{ color: #e2041b; /* Shoujouhi */ }
+.voidtext	{ color: #dcdddd; /* Shiro-nezu */ }
+.available	{ color: #007b43; /* Tokiwa-iro */ }
+
+hr.flatline {
+	border-color: #d4dcd6;	/* Sobakiri-iro */
+	border-style: solid;
+	border-width: 1px 0 0 0;
+	height: 1px;
+}
 

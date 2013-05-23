@@ -1,4 +1,4 @@
-# $Id: RFC2822.pm,v 1.8 2010/03/01 23:41:41 ak Exp $
+# $Id: RFC2822.pm,v 1.13 2010/07/12 08:07:43 ak Exp $
 # -Id: RFC2822.pm,v 1.1 2009/08/29 08:52:03 ak Exp -
 # -Id: RFC2822.pm,v 1.6 2009/05/29 08:22:21 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -11,12 +11,6 @@
  ## ##  ##    ##  ## ##     ##  ## ##     ##      
  ##  ## ##     ####  ######  ####  ###### ######  
 package Kanadzuchi::RFC2822;
-
-#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
-# ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
-# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
-#
 use strict;
 use warnings;
 
@@ -121,7 +115,7 @@ sub is_subaddress
 	# @See		http://tools.ietf.org/html/rfc5233
 	my $class = shift();
 	my $email = shift() || return(0);
-	my $lpart = [ split(q{@},$email) ]->[0];
+	my $lpart = [ split('@',$email) ]->[0];
 
 	return(0) unless( $class->is_emailaddress($email) );
 	return(1) if( $lpart =~ m{\A[-_\w]+?[+][^@]+\z} );
@@ -140,18 +134,18 @@ sub expand_subaddress
 	#		(String) Empty
 	# @See		http://tools.ietf.org/html/rfc5233
 	my $class = shift();
-	my $email = shift() || return(q{});
-	my $lpart = [ split(q{@},$email) ]->[0];
+	my $email = shift() || return q();
+	my $lpart = [ split('@',$email) ]->[0];
 	my $xtemp = q();
 	my $xaddr = q();
 
-	return(q{}) unless( $class->is_subaddress($email) );
+	return q() unless( $class->is_subaddress($email) );
 	if( $lpart =~ m{\A[-_\w]+?[+](\w[-._\w]+\w)[=](\w[-.\w]+\w)\z} )
 	{
 		$xtemp = $1.q{@}.$2;
 		$xaddr = $xtemp if( $class->is_emailaddress($xtemp) );
 	}
-	return($xaddr);
+	return $xaddr;
 }
 
 sub cleanup
@@ -166,12 +160,16 @@ sub cleanup
 	my $class = shift();
 	my $email = shift();
 
-	chomp($email);			# Remove CR/LF
-	$email =~ s{\A\s+}{}g;		# Remove spaces in the head
-	$email =~ s{\s+\z}{}g;		# Remove spaces in the tail
-	$email =~ s{\Amailto:}{}g;	# Remove 'mailto' schema
-	$email =~ y{[<>]}{}d;		# Remove angle brackets
-	return($email);
+	chomp $email;				# Remove CR/LF
+	$email =~ s{\A\s+}{}g;			# Remove spaces in the head
+	$email =~ s{\s+\z}{}g;			# Remove spaces in the tail
+	$email =~ s{\Amailto:}{}g;		# Remove 'mailto' schema
+	$email =~ s{\A[(].+[)][ ]}{}g;		# Remove comment block
+	$email =~ s{[ ][(].+[)]\z}{}g;
+	$email =~ s{\A.+[<](.+)[>]\z}{$1}g;
+	$email =~ s{\A[<](.+)[>].+\z}{$1}g;
+	$email =~ y{[]<>()'";: }{}d;		# Remove brackets and quotations
+	return $email;
 }
 
 1;

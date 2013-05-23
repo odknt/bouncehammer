@@ -1,4 +1,4 @@
-# $Id: Log.pm,v 1.15 2010/04/09 03:52:58 ak Exp $
+# $Id: Log.pm,v 1.19 2010/07/07 11:21:37 ak Exp $
 # -Id: Log.pm,v 1.2 2009/10/06 06:21:47 ak Exp -
 # -Id: Log.pm,v 1.11 2009/07/16 09:05:33 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -47,6 +47,22 @@ __PACKAGE__->mk_accessors(
 # ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
 #
+my $OutputFormat = { 'yaml' => q(), 'json' => q(), 'csv' => q() };
+my $OutputHeader = { 'yaml' => q(), 'json' => q(), 'csv' => q() };
+my $RecDelimiter = { 'yaml' => q(), 'json' => ',', 'csv' => q() };
+
+# Dump with YAML/JSON format
+$OutputFormat->{'json'} .= qq|{ "bounced": %d, "addresser": "%s", "recipient": "%s", |;
+$OutputFormat->{'json'} .= qq|"senderdomain": "%s", "destination": "%s", "reason": "%s", |;
+$OutputFormat->{'json'} .= qq|"hostgroup": "%s", "provider": "%s", "frequency": %d, |;
+$OutputFormat->{'json'} .= qq|"description": %s, "token": "%s" }|;
+$OutputFormat->{'yaml'} .= qq|- |.$OutputFormat->{'json'};
+
+# Dump with CSV format
+$OutputFormat->{'csv'} .= qq|%d,%s,%s,%s,%s,%s,%s,%s,%d,%d,%s,%s,%s|;
+$OutputHeader->{'csv'} .= q|bounced,addresser,recipient,senderdomain,destination,reason,|;
+$OutputHeader->{'csv'} .= q|hostgroup,provider,frequency,deliverystatus,timezoneoffset,|;
+$OutputHeader->{'csv'} .= q|diagnosticcode,token|.qq|\n|;
 
 #  ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
 # ||C |||l |||a |||s |||s |||       |||M |||e |||t |||h |||o |||d |||s ||
@@ -66,10 +82,10 @@ sub new
 	my $argvs = { @_ };
 
 	DEFAULT_VALUES: {
-		$argvs->{'format'} = q(yaml) unless( $argvs->{'format'} );
+		$argvs->{'format'} = 'yaml' unless( $argvs->{'format'} );
 		$argvs->{'comment'} = q() unless( $argvs->{'comment'} );
 	}
-	return( $class->SUPER::new( $argvs ) );
+	return $class->SUPER::new( $argvs );
 }
 
 #  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
@@ -84,7 +100,7 @@ sub logger
 	# +-+-+-+-+-+-+
 	#
 	# @Description	Log to the file(JSON::Syck::Dump)
-	# @Param
+	# @Param	<None>
 	# @Return	0 = device not found or no record to log
 	#		n = the number of logged records
 	# @See		dumper()
@@ -95,11 +111,11 @@ sub logger
 	if( $reqv == 1 )
 	{
 		$data = $self->dumper();
-		return($data);
+		return $data;
 	}
 	else
 	{
-		return( $self->dumper() );
+		return $self->dumper();
 	}
 }
 
@@ -117,30 +133,28 @@ sub dumper
 	my $atab = undef();
 	my $data = undef();
 	my $reqv = defined(wantarray()) ? 1 : 0;
-	my $time = localtime();
+	my $damn = {};
 	my $head = q();
 	my $foot = q();
 
-	my $outputformat = { 'yaml' => q(), 'json' => q() };
-	my $recdelimiter = { 'yaml' => q(), 'json' => q(,) };
-
-	$outputformat->{'json'} .= qq|{ "bounced": %d, "addresser": "%s", "recipient": "%s", |;
-	$outputformat->{'json'} .= qq|"senderdomain": "%s", "destination": "%s", "reason": "%s", |;
-	$outputformat->{'json'} .= qq|"hostgroup": "%s", "provider": "%s", "frequency": %d, |;
-	$outputformat->{'json'} .= qq|"description": %s, "token": "%s" }|;
-	$outputformat->{'yaml'} .= qq|- |.$outputformat->{'json'};
-
-	my $outputheader = {
-		'yaml'		=> q|# Generated: |.$time->ymd('/').q| |.$time->hms(':').qq| \n|,
-		'json'		=> q|# Generated: |.$time->ymd('/').q| |.$time->hms(':').qq| \n|,
-	};
-
 	return(0) if( $self->{'count'} == 0 );
+
+	# Output header
+	if( $self->{'format'} eq 'csv' )
+	{
+		$self->{'header'} = 1;
+	}
+	else
+	{
+		my $_t = localtime();
+		$OutputHeader->{ $self->{'format'} } = '# Generated: '.$_t->ymd('/').' '.$_t->hms(':').qq| \n|,
+	}
+
 
 	# Decide header and footer
 	if( $self->{'header'} )
 	{
-		$head .= $outputheader->{ $self->{'format'} };
+		$head .= $OutputHeader->{ $self->{'format'} };
 		$head .= q|# |.qq|$self->{'comment'}\n| if( length($self->{'comment'}) );
 	}
 
@@ -150,7 +164,7 @@ sub dumper
 	}
 
 	# Print header
-	if( $self->{'format'} eq q(asciitable) )
+	if( $self->{'format'} eq 'asciitable' )
 	{
 		require Text::ASCIITable;
 		$atab->{'tab'} = new Text::ASCIITable( { 'headingText' => 'Bounce Messages' } );
@@ -168,37 +182,39 @@ sub dumper
 
 	PREPARE_LOG: foreach my $_e ( @{$self->{'entities'}} )
 	{
-		my $_h = {
-			'Ltoken' => $_e->token(),
-			'Lreason' => $_e->reason(),
-			'Lbounced' => $_e->bounced->epoch(),
-			'Lprovider' => $_e->provider(),
-			'Lhostgroup' => $_e->hostgroup(),
-			'Lfrequency' => $_e->frequency(),
-			'Laddresser' => $_e->addresser->address(),
-			'Lrecipient' => $_e->recipient->address(),
-			'Ldatestring' => $_e->bounced->ymd('/').q{ }.$_e->bounced->hms(':'),
-			'Ldescription' => ${ Kanadzuchi::Metadata->to_string($_e->description()) },
-			'Ldestination' => $_e->destination(),
-			'Lsenderdomain' => $_e->senderdomain(),
-			'Ldeliverystatus' => $_e->deliverystatus(),
-		};
+		$damn = $_e->damn();
 
 		if( defined($atab) )
 		{
 			$atab->{'num'}++;
-			$atab->{'tab'}->addRow( $atab->{'num'}, $_h->{'Ldatestring'}, $_h->{'Laddresser'},
-				$_h->{'Lrecipient'}, $_h->{'Ldeliverystatus'}, $_h->{'Lreason'} );
+			$damn->{'datestring'} = $_e->bounced->ymd('/').' '.$_e->bounced->hms(':');
+			$atab->{'tab'}->addRow( $atab->{'num'}, $damn->{'datestring'}, $damn->{'addresser'},
+				$damn->{'recipient'}, $damn->{'deliverystatus'}, $damn->{'reason'} );
 		}
 		else
 		{
-			$data .= sprintf( $outputformat->{$self->{'format'}},
-					$_h->{'Lbounced'}, $_h->{'Laddresser'}, $_h->{'Lrecipient'},
-					$_h->{'Lsenderdomain'}, $_h->{'Ldestination'},
-					$_h->{'Lreason'}, $_h->{'Lhostgroup'}, $_h->{'Lprovider'}, 
-					$_h->{'Lfrequency'}, $_h->{'Ldescription'}, $_h->{'Ltoken'} );
-			$data .= $recdelimiter->{ $self->{'format'} }.qq(\n);
+			if( $self->{'format'} eq 'csv' )
+			{
+				$damn->{'diagnosticcode'} =~ y{,}{ };
+				$data .= sprintf( $OutputFormat->{ $self->{'format'} },
+						$damn->{'bounced'}, $damn->{'addresser'}, $damn->{'recipient'},
+						$damn->{'senderdomain'}, $damn->{'destination'}, $damn->{'reason'}, 
+						$damn->{'hostgroup'}, $damn->{'provider'}, $damn->{'frequency'}, 
+						$damn->{'deliverystatus'}, $damn->{'timezoneoffset'},
+						$damn->{'diagnosticcode'}, $damn->{'token'} );
+
+			}
+			else
+			{
+				$data .= sprintf( $OutputFormat->{ $self->{'format'} },
+						$damn->{'bounced'}, $damn->{'addresser'}, $damn->{'recipient'},
+						$damn->{'senderdomain'}, $damn->{'destination'},
+						$damn->{'reason'}, $damn->{'hostgroup'}, $damn->{'provider'}, 
+						$damn->{'frequency'}, $damn->{'description'}, $damn->{'token'} );
+			}
+			$data .= $RecDelimiter->{ $self->{'format'} }.qq(\n);
 		}
+
 	} # End of foreach() PREPARE_LOG:
 
 	# Replace the ',' at the end of data with right square bracket for the format JSON
@@ -218,7 +234,7 @@ sub dumper
 	if( $reqv == 1 )
 	{
 		# Return as a scalar(dumped data)
-		return($data);
+		return $data;
 	}
 	else
 	{

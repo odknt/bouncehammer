@@ -1,4 +1,4 @@
-# $Id: Summary.pm,v 1.11 2010/06/06 14:25:07 ak Exp $
+# $Id: Summary.pm,v 1.14 2010/07/11 06:48:03 ak Exp $
 # -Id: Summary.pm,v 1.1 2009/08/29 09:30:33 ak Exp -
 # -Id: Summary.pm,v 1.1 2009/08/18 02:37:53 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -29,15 +29,15 @@ use Kanadzuchi::BdDR::BounceLogs::Masters;
 # ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub summary_ontheweb
+sub datasummary
 {
-	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	# |s|u|m|m|a|r|y|_|o|n|t|h|e|w|e|b|
-	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	# +-+-+-+-+-+-+-+-+-+-+-+
+	# |d|a|t|a|s|u|m|m|a|r|y|
+	# +-+-+-+-+-+-+-+-+-+-+-+
 	#
-	# @Description	Draw summary in HTML
+	# @Description	Data summary page
 	my $self = shift();
-	my $file = 'summary.'.$self->{'language'}.'.html';
+	my $file = 'summary.html';
 	my $bddr = $self->{'database'};
 
 	my $bouncelog = new Kanadzuchi::BdDR::BounceLogs::Table( 'handle' => $bddr->handle() );
@@ -52,8 +52,7 @@ sub summary_ontheweb
 		'capacity'	=> $maxrecord ? sprintf("%0.4f", $numofrecs / $maxrecord ) : 0,
 	};
 
-	# Count the number of records in SenderDoamins table
-	foreach my $mt ( 's', 'd' )
+	foreach my $mt ( 'a', 's', 'd' )
 	{
 		my $mtobj = new Kanadzuchi::BdDR::BounceLogs::Masters::Table( 
 					'alias' => $mt, 'handle' => $bddr->handle() );
@@ -62,6 +61,8 @@ sub summary_ontheweb
 		my $maxrr = $tableconf->{$tname}->{'maxrecords'};
 		my $ratio = $maxrr ? sprintf( "%0.4f", $count / $maxrr ) : 0;
 
+		map { $tableconf->{ $tname }->{$_} = 0 
+			unless defined $tableconf->{$tname}->{$_} } qw( readonly maxrecords );
 		$tablesumm->{ $tname } = {
 				'capacity' => $ratio,
 				'screenname' => $mtobj->alias(),
@@ -73,7 +74,7 @@ sub summary_ontheweb
 		'tableconf' => $tableconf,
 		'tablesumm' => $tablesumm,
 	);
-	$self->tt_process($file);
+	return $self->tt_process($file);
 }
 
 1;

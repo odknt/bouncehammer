@@ -1,4 +1,4 @@
-# $Id: 151_ui-cli.t,v 1.5 2010/05/17 00:00:56 ak Exp $
+# $Id: 151_ui-cli.t,v 1.7 2010/07/11 09:20:38 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -10,9 +10,8 @@ use warnings;
 use Kanadzuchi::Test;
 use Kanadzuchi::UI::CLI;
 use Path::Class::File;
-use JSON::Syck;
 use File::Basename qw(basename);
-use Test::More ( tests => 700 );
+use Test::More ( tests => 736 );
 
 #  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 # ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -129,7 +128,7 @@ foreach my $cf ( './src/etc/prove.cf', './src/etc/test-run.cf', '/dev/null', '/d
 	}
 }
 
-foreach my $e ( @{$Kanadzuchi::Test::ExceptionalValues} )
+foreach my $e ( @{$Kanadzuchi::Test::ExceptionalValues}, @{$Kanadzuchi::Test::NegativeValues} )
 {
 	my $l = 0;
 	my $o = new Kanadzuchi::UI::CLI( 

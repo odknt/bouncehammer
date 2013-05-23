@@ -1,4 +1,4 @@
-# $Id: Update.pm,v 1.9 2010/05/19 18:25:10 ak Exp $
+# $Id: Update.pm,v 1.14 2010/07/11 06:48:03 ak Exp $
 # -Id: Update.pm,v 1.1 2009/08/29 09:30:33 ak Exp -
 # -Id: Update.pm,v 1.6 2009/08/13 07:13:58 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -31,65 +31,66 @@ use Time::Piece;
 # ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub update_ontheweb
+sub updatetherecord
 {
 	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	# |u|p|d|a|t|e|_|o|n|t|h|e|w|e|b|
+	# |u|p|d|a|t|e|t|h|e|r|e|c|o|r|d|
 	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	#
-	# @Description	Execute update(Ajax)
+	# @Description	Update the record on the DB.BounceLogs
 	# @Param	<None>
 	# @Return
 	my $self = shift();
 	my $bddr = $self->{'database'};
-	my $file = 'div-result.'.$self->{'language'}.'.html';
+	my $file = 'div-result.html';
 	my $iter = undef();	# (K::Iterator) Iterator object
 	my $cond = {};		# (Ref->Hash) WHERE Condition
+	my $isro = $self->{'webconfig'}->{'database'}->{'table'}->{'bouncelogs'}->{'readonly'};
 
 	$cond = {
 		'id' => $self->param('pi_id') || $self->query->param('id') || 0,
 		'token' => $self->param('token') || $self->query->param('token') || q(),
 	};
-	return('Invalid record ID') unless($cond->{'id'});
+	return $self->e('invalidrecordid', 'ID: #'.$cond->{'id'} ) unless($cond->{'id'});
 	$iter = Kanadzuchi::Mail::Stored::BdDR->searchandnew( $bddr->handle(), $cond );
 
 	if( $iter->count() )
 	{
 		my $this = undef();	# (K::Mail::Stored::YAML) YAML object
-		my $that = undef();	# (K::Mail::Stored::BdDR) BdDR object
 		my $iitr = undef();	# (K::Iterator) Iterator for inner process
 		my $data = [];		# (Ref->Array) Updated record
+		my $dont = 0;		# (Integer) Flag, Do Not UPDATE
+		my $stat = 0;		# (Integer) UPDATE Status
 		my $cdat = new Kanadzuchi::BdDR::Cache();
 		my $btab = new Kanadzuchi::BdDR::BounceLogs::Table( 'handle' => $bddr->handle() );
 
-		while( $this = $iter->next() )
+		$this = $iter->first();
+		return $self->e('nosuchrecord', 'ID: #'.$cond->{'id'}) unless( $this->id() );
+
+		$dont |= $self->query->param('hostgroup') eq '_' ? 1 : 0;
+		$dont |= $self->query->param('reason') eq '_' ? 2 : 0;
+
+		$this->hostgroup( $self->query->param('hostgroup') ) unless( $dont & 1 );
+		$this->reason( $self->query->param('reason') ) unless( $dont & 2 );
+
+		if( $dont != 3 )
 		{
-			$this->hostgroup( $self->query->param('hostgroup') );
-			$this->reason( $self->query->param('reason') );
 			$this->updated( Time::Piece->new() );
-			last();
+			$stat = $this->update( $btab, $cdat );
+
+			return('Failed') unless( $stat );
 		}
 
-		if( $this->update( $btab, $cdat ) )
-		{
-			$data = $this->damn();
-			$data->{'updated'}  = $this->updated->ymd().'('.$this->updated->wdayname().') '.$this->updated->hms();
-			$data->{'bounced'}  = $this->bounced->ymd().'('.$this->bounced->wdayname().') '.$this->bounced->hms();
-			$data->{'bounced'} .= ' '.$this->timezoneoffset() if( $this->timezoneoffset() );
-
-			$self->tt_params( 'bouncemessages' => [ $data ], 'isupdated' => 1 );
-			$self->tt_process( $file );
-		}
-		else
-		{
-			# Failed to update
-			return('Failed');
-		}
+		$data = $this->damn();
+		$data->{'updated'}  = $this->updated->ymd().'('.$this->updated->wdayname().') '.$this->updated->hms();
+		$data->{'bounced'}  = $this->bounced->ymd().'('.$this->bounced->wdayname().') '.$this->bounced->hms();
+		$data->{'bounced'} .= ' '.$this->timezoneoffset() if( $this->timezoneoffset() );
+		$self->tt_params( 'bouncemessages' => [ $data ], 'isupdated' => 1, 'isreadonly' => $isro );
+		return $self->tt_process( $file );
 	}
 	else
 	{
-		# Failed to update
-		return('No such record in the database');
+		return $self->e('nosuchrecord', 'ID: #'.$cond->{'id'});
 	}
 }
 

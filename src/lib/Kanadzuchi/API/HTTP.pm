@@ -1,4 +1,4 @@
-# $Id: HTTP.pm,v 1.12 2010/05/26 03:56:06 ak Exp $
+# $Id: HTTP.pm,v 1.17 2010/07/12 17:54:58 ak Exp $
 # -Id: HTTP.pm,v 1.3 2009/10/06 00:36:49 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi::API::
@@ -22,12 +22,6 @@ use base 'CGI::Application';
 use Kanadzuchi::Exceptions;
 use Kanadzuchi::Time;
 use Error ':try';
-
-#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
-# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
-# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
-#
 
 #   ____ ____ ____ ____ ____ ____ ____ 
 #  ||M |||e |||t |||h |||o |||d |||s ||
@@ -63,8 +57,9 @@ sub setup
 	$self->error_mode('exception');
 	$self->mode_param('x');
 	$self->run_modes( 
-		'Empty' => 'api_empty',
-		'Query' => 'api_query',
+		'Empty' => 'empty',
+		'Select' => 'select',
+		'Search' => 'search',
 	);
 }
 
@@ -84,7 +79,8 @@ sub cgiapp_prerun
 	# Set values to Kanadzuchi::BdDR object, Create data source name
 	try {
 		$bddr->setup( $conf->{'database'} );
-		Kanadzuchi::Exception::API->throw( '-text' => q{Failed to connect DB} ) unless($bddr->connect());
+		Kanadzuchi::Exception::API->throw( 
+			'-text' => 'Failed to connect DB' ) unless($bddr->connect());
 		$self->{'database'} = $bddr;
 	}
 	catch Kanadzuchi::Exception::API with {
@@ -141,51 +137,16 @@ sub loadconfig
 	$self->{'webconfig'} = $yaml if( ref($yaml) eq q|HASH| );
 }
 
-sub api_empty
+sub empty
 {
-	# +-+-+-+-+-+-+-+-+-+
-	# |a|p|i|_|e|m|p|t|y|
-	# +-+-+-+-+-+-+-+-+-+
+	# +-+-+-+-+-+
+	# |e|m|p|t|y|
+	# +-+-+-+-+-+
 	#
 	# @Description	Return empty page
 	# @Param	None
 	my $self = shift();
 	return();
-}
-
-sub api_query
-{
-	# +-+-+-+-+-+-+-+-+-+
-	# |a|p|i|_|q|u|e|r|y|
-	# +-+-+-+-+-+-+-+-+-+
-	#
-	# @Description	Send message token and return serialized result.
-	# @Param	None
-	my $self = shift();
-	return() unless( length($self->param('token')) );
-
-	require Kanadzuchi::Mail::Stored::BdDR;
-	require Kanadzuchi::BdDR::Page;
-	require Kanadzuchi::Log;
-
-	my $iterat = undef();
-	my $zcilog = undef();
-	my $string = q();
-	my $wherec = { 'token' => lc($self->param('token')) };
-	my $pagina = Kanadzuchi::BdDR::Page->new( 'resultsperpage' => 1 );
-
-	$iterat = Kanadzuchi::Mail::Stored::BdDR->searchandnew(
-			$self->{'database'}->handle(), $wherec, $pagina );
-	return(q{}) unless( $iterat->count() );
-
-	# Create serialized data for the format JSON
-	$zcilog = Kanadzuchi::Log->new();
-	$zcilog->count( $iterat->count() );
-	$zcilog->format( 'json' );
-	$zcilog->entities( $iterat->all() );
-	$string = $zcilog->dumper() || q();
-
-	return($string);
 }
 
 sub exception

@@ -1,4 +1,4 @@
-# $Id: Kanadzuchi.pm,v 1.22 2010/06/08 19:17:21 ak Exp $
+# $Id: Kanadzuchi.pm,v 1.26 2010/07/07 11:21:35 ak Exp $
 # -Id: TheHammer.pm,v 1.4 2009/09/01 23:19:41 ak Exp -
 # -Id: Herculaneum.pm,v 1.13 2009/08/27 05:09:23 ak Exp -
 # -Id: Version.pm,v 1.35 2009/08/27 05:09:29 ak Exp -
@@ -47,7 +47,7 @@ __PACKAGE__->mk_accessors(
 # ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
 #
-our $VERSION = q{2.3.3};
+our $VERSION = q{2.4.0};
 our $SYSNAME = q{BounceHammer};
 our $SYSCONF = q{__KANADZUCHIROOT__/etc/bouncehammer.cf};
 
@@ -72,7 +72,7 @@ sub new
 		'user' => $>, 
 		'config' => {}, };
 
-	return( $class->SUPER::new( $argvs ) );
+	return $class->SUPER::new( $argvs );
 }
 
 sub is_exception
@@ -187,7 +187,7 @@ sub load
 	{
 		# Test mode
 		require Kanadzuchi::Config::TestRun;
-		$self->{'config'} = $Kanadzuchi::Config::TestRun::Configuration;
+		$self->{'config'} = Kanadzuchi::Config::TestRun->configuration();
 	}
 
 	return($exception) if( $exception );
@@ -237,12 +237,12 @@ sub get_logfile
 	# @Param <opt>	(Ref->Hash) File name options
 	# @Return	(String) Log file name
 	my $self = shift();
-	my $type = shift() || q(temp);
+	my $type = shift() || 'temp';
 	my $lopt = shift() || { 'date' => q(), 'output' => q() };
 
-	my $char = substr(lc($type),0,1) || q(t);
+	my $char = substr(lc($type),0,1) || 't';
 	my $conf = $self->{'config'};
-	my $time = bless(localtime(),'Time::Piece');
+	my $time = bless( localtime(), q|Time::Piece| );
 	my $logf = $conf->{'file'}->{'storage'};
 	my $file = q();
 
@@ -269,8 +269,8 @@ sub get_logfile
 			# Temporary Log file name
 			while(1)
 			{
-				$_rand = $$ + int(rand() * 10);
 				$_time = $time->epoch();
+				$_rand = $$ + int(rand() * 1e1);
 				$file = sprintf("%s/%s.%s.%08x.%06x.%s", 
 						$lopt->{'output'}, $logf->{'prefix'}, $lopt->{'date'},
 						$_time, $_rand, $logf->{'suffix'} );
@@ -282,8 +282,8 @@ sub get_logfile
 			# Log file name for the fallback
 			while(1)
 			{
-				$_rand = ( 2 ** 24 - 1 ) ^ $$ - int(rand() * 10);
-				$_time = ~$time->epoch();
+				$_time = $time->epoch() / 2;
+				$_rand = $$ + int(rand() * 1e2);
 				$file = sprintf("%s/%s.%s.%08x.%06x.%s", 
 						$lopt->{'output'}, $logf->{'prefix'}, $lopt->{'date'},
 						$_time, $_rand, $logf->{'suffix'} );
@@ -295,8 +295,8 @@ sub get_logfile
 			# Log file name for mergence
 			while(1)
 			{
-				$_rand = ( 2 ** 24 - 1 ) ^ $$ / 2;
 				$_time = $time->epoch() / 10;
+				$_rand = $$ + int(rand() * 1e3);
 				$file = sprintf("%s/%s.%s.%08x.%06x.%s", 
 						$lopt->{'output'}, $logf->{'prefix'}, $lopt->{'date'},
 						$_time, $_rand, $logf->{'suffix'} );
@@ -305,7 +305,7 @@ sub get_logfile
 		}
 	}
 
-	return($file);
+	return $file;
 }
 
 1;

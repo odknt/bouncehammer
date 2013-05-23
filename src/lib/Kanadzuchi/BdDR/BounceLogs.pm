@@ -1,4 +1,4 @@
-# $Id: BounceLogs.pm,v 1.6 2010/06/08 19:16:45 ak Exp $
+# $Id: BounceLogs.pm,v 1.11 2010/07/07 11:21:42 ak Exp $
 # -Id: BounceLogs.pm,v 1.9 2010/03/04 08:33:28 ak Exp -
 # -Id: BounceLogs.pm,v 1.1 2009/08/29 08:58:48 ak Exp -
 # -Id: BounceLogs.pm,v 1.6 2009/08/27 05:09:55 ak Exp -
@@ -88,11 +88,6 @@ __PACKAGE__->mk_accessors(
 	'error'			# (Ref->Hash) Latest Error information
 );
 
-#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
-# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
-# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
-#
 #  ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
 # ||C |||l |||a |||s |||s |||       |||M |||e |||t |||h |||o |||d |||s ||
 # ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
@@ -123,7 +118,7 @@ sub new
 	$argvs->{'object'} = $argvs->{'handle'}
 				? $klass->new( { 'dbh' => $argvs->{'handle'} } )
 				: undef();
-	return( $class->SUPER::new($argvs));
+	return $class->SUPER::new($argvs);
 }
 
 #  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
@@ -131,11 +126,11 @@ sub new
 # ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub _is_validid
+sub is_validid
 {
-	# +-+-+-+-+-+-+-+-+-+-+-+
-	# |_|i|s|_|v|a|l|i|d|i|d|
-	# +-+-+-+-+-+-+-+-+-+-+-+
+	# +-+-+-+-+-+-+-+-+-+-+
+	# |i|s|_|v|a|l|i|d|i|d|
+	# +-+-+-+-+-+-+-+-+-+-+
 	#
 	# @Description	Database ID validation
 	# @Param	<None>
@@ -179,7 +174,7 @@ sub search
 	# @Param <ref>	(Ref->Hash) Where Condition
 	# @Param <obj>	(Kanadzuchi::BdDR::Page) Pagination object
 	# @Param <flg>	(Integer) Flag, 1=Count only
-	# @Return	(Ref->Array) Array-ref of Hash references
+	# @Return	(Ref->Array) Hash references
 	my $self = shift();
 	my $cond = shift() || {};
 	my $page = shift() || new Kanadzuchi::BdDR::Page;
@@ -244,11 +239,11 @@ sub search
 
 			if( $_c eq 'hostgroup' )
 			{
-				$wherecnd->{$_c} = Kanadzuchi::Mail->gname2id($cond->{$_c}) unless( $cond->{$_c} =~ m{\A\d+\z} );
+				$wherecnd->{$_c} = Kanadzuchi::Mail->gname2id($cond->{$_c}) unless $cond->{$_c} =~ m{\A\d+\z};
 			}
 			elsif( $_c eq 'reason' )
 			{
-				$wherecnd->{$_c} = Kanadzuchi::Mail->rname2id($cond->{$_c}) unless( $cond->{$_c} =~ m{\A\d+\z} );
+				$wherecnd->{$_c} = Kanadzuchi::Mail->rname2id($cond->{$_c}) unless $cond->{$_c} =~ m{\A\d+\z};
 			}
 			elsif( $_c eq 'bounced' || $_c eq 'updated' || $_c eq 'frequency' )
 			{
@@ -263,7 +258,7 @@ sub search
 
 		COLUMNS_IN_MASTERTABLE: foreach my $_c ( @$joincols )
 		{
-			next() unless( defined($cond->{$_c}) );
+			next() unless defined($cond->{$_c});
 			$mtab = $mtobject->{ $_c.'s' };
 			$rset->add_where( $mtab->table().'.'.$mtab->field() => lc($cond->{$_c}) );
 		}
@@ -302,9 +297,98 @@ sub search
 		}
 	};
 
-	if( $@ ){ $self->{'error'}->{'string'} = $@; $self->{'error'}->{'count'}++; }
-	return($nrecords) if( $cflg );
-	return($data);
+	if( $@ )
+	{
+		$self->{'error'}->{'string'} = $@; 
+		$self->{'error'}->{'count'}++;
+	}
+	return $nrecords if $cflg;
+	return $data;
+}
+
+sub groupby
+{
+	# +-+-+-+-+-+-+-+
+	# |g|r|o|u|p|b|y|
+	# +-+-+-+-+-+-+-+
+	#
+	# @Description	Aggregate by specified column
+	# @Param <str>	(String) Column name
+	# @Return	(Ref->Array) Aggregated data
+	my $self = shift();
+	my $name = shift() || return {};
+	my $rset = undef();
+	my $mtab = q();
+	my $data = [];
+
+	my $iterator = undef();
+	my $xtobject = $self->{'object'};
+	return [] unless( grep { $name eq $_ }
+			( @{ $self->{'fields'}->{'join'} }, 'hostgroup', 'reason' ) );
+
+	eval {
+		if( $name eq 'hostgroup' || $name eq 'reason' )
+		{
+			my $_sqlx = 'SELECT '.$name.', ';
+			$_sqlx .= 'COUNT(token) AS x, ';
+			$_sqlx .= 'SUM(frequency) AS y ';
+			$_sqlx .= 'FROM '.$self->{'table'}.' GROUP BY '.$name;
+
+			$iterator = $xtobject->search_by_sql( $_sqlx );
+		}
+		else
+		{
+			my $_mtab = new Kanadzuchi::BdDR::BounceLogs::Masters::Table(
+						'alias' => $name.'s', 'handle' => $self->{'handle'} );
+			my $_ropt = {   'group' => { 'column' => $name },
+					'select' => [ 
+						'COUNT(token) AS x', 
+						'SUM(frequency) AS y', 
+					],
+				};
+
+			my $_rset = $xtobject->resultset( $_ropt );
+			my $_cond = sprintf( "%s.%s = %s.id", $self->{'table'}, $name, $_mtab->table() );
+			my $_join = { 'type' => 'inner', 'table' => $_mtab->table(), 'condition' => $_cond };
+
+			$_rset->add_select( $_mtab->table().'.'.$_mtab->field() => $name );
+			$_rset->add_join( $self->{'table'} => [ $_join ] );
+			$iterator = $_rset->retrieve(); 
+		}
+	};
+
+	if( $@ )
+	{
+		$self->{'error'}->{'string'} = $@;
+		$self->{'error'}->{'count'}++;
+		return [];
+	}
+
+	RETRIEVE: while( my $r = $iterator->next() )
+	{
+		push( @$data, { 'name' => $r->$name, 'size' => $r->x(), 'freq' => $r->y() } )
+	}
+	return $data;
+}
+
+sub size
+{
+	#+-+-+-+-+
+	#|s|i|z|e|
+	#+-+-+-+-+
+	#
+	# @Description	SELECT count(*) FROM t_bouncelogs;
+	# @Param	<None>
+	# @Return	(Integer) The number of records
+	my $self = shift();
+	my $size = 0;
+
+	eval{ $size = $self->search( {}, Kanadzuchi::BdDR::Page->new(), 1 ) };
+	return $size unless $@;
+
+	$self->{'error'}->{'string'} = $@;
+	$self->{'error'}->{'count'}++;
+	return(0);
 }
 
 sub count
@@ -320,10 +404,10 @@ sub count
 	my $self = shift();
 	my $cond = shift() || {};
 	my $page = shift() || new Kanadzuchi::BdDR::Page;
-	my $nofr = 0;
+	my $size = 0;
 
-	eval{ $nofr = $self->search( $cond, $page, 1 ) };
-	return( $nofr ) unless( $@ );
+	eval{ $size = $self->search( $cond, $page, 1 ) };
+	return $size unless $@;
 
 	$self->{'error'}->{'string'} = $@;
 	$self->{'error'}->{'count'}++;
@@ -349,7 +433,7 @@ sub insert
 		$that = $self->{'object'}->insert( $self->{'table'}, $data );
 		$nuid = $that->get_column('id') if( defined($that) );
 	};
-	return($nuid) unless($@);
+	return $nuid unless $@;
 	$self->{'error'}->{'string'} = $@;
 	$self->{'error'}->{'count'}++;
 	return(0);
@@ -371,21 +455,46 @@ sub update
 	my $cond = shift() || return(0);
 	my $stat = 0;
 
-	return(0) if( ! $self->_is_validid($cond->{'id'}) && ! $cond->{'token'} );
+	return(0) if( ! $self->is_validid($cond->{'id'}) && ! $cond->{'token'} );
 	eval {
 		$stat = $self->{'object'}->update( $self->{'table'}, $data, $cond );
 	};
-	return($stat) unless($@);
+	return $stat unless $@;
 	$self->{'error'}->{'string'} = $@;
 	$self->{'error'}->{'count'}++;
 	return(0);
 }
 
-sub disableit
+sub remove
 {
-	# +-+-+-+-+-+-+-+-+-+
-	# |d|i|s|a|b|l|e|i|t|
-	# +-+-+-+-+-+-+-+-+-=
+	# +-+-+-+-+-+-+
+	# |r|e|m|o|v|e|
+	# +-+-+-+-+-+-+
+	#
+	# @Description	DELETE: remove the reocrd
+	# @Param <ref>	(Ref->Hash) Where condition
+	# @Return	(Integer) 0 = Failed to remove or parameter error
+	#		(Integer) 1 = Successfully removed
+	my $self = shift();
+	my $cond = shift() || return(0);
+	my $stat = 0;
+
+	return(0) if( ! $self->is_validid($cond->{'id'}) && ! $cond->{'token'} );
+	eval {
+		$stat = $self->{'object'}->delete( $self->{'table'}, $cond );
+	};
+	return $stat unless $@;
+	$self->{'error'}->{'string'} = $@;
+	$self->{'error'}->{'count'}++;
+	return(0);
+
+}
+
+sub disable
+{
+	# +-+-+-+-+-+-+-+
+	# |d|i|s|a|b|l|e|
+	# +-+-+-+-+-+-+-+
 	#
 	# @Description	Disable the rocord
 	# @Param <ref>	(Ref->Hash) Where Condition
@@ -393,7 +502,8 @@ sub disableit
 	#		(Integer) 0 = Failed to UPDATE
 	my $self = shift();
 	my $cond = shift() || return(0);
-	return($self->update( { 'disabled' => 1 }, $cond ) );
+	return(0) if( ! $self->is_validid($cond->{'id'}) && ! $cond->{'token'} );
+	return $self->update( { 'disabled' => 1 }, $cond );
 }
 
 1;
