@@ -1,8 +1,8 @@
-# $Id: Google.pm,v 1.5.2.5 2011/10/07 06:23:15 ak Exp $
+# $Id: Google.pm,v 1.5.2.7 2013/04/15 04:20:53 ak Exp $
 # -Id: Google.pm,v 1.2 2010/07/04 23:45:49 ak Exp -
 # -Id: Google.pm,v 1.1 2009/08/29 08:50:36 ak Exp -
 # -Id: Google.pm,v 1.1 2009/07/31 09:04:38 ak Exp -
-# Copyright (C) 2009-2011 Cubicroot Co. Ltd.
+# Copyright (C) 2009-2013 Cubicroot Co. Ltd.
 # Kanadzuchi::MTA::US::
 
   ####                        ###          
@@ -118,7 +118,7 @@ my $StateCodeMap = {
 # ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-sub version { '2.1.5' };
+sub version { '2.1.7' };
 sub description { 'Google Gmail' };
 sub xsmtpagent { 'X-SMTP-Agent: US::Google'.qq(\n); }
 sub emailheaders
@@ -130,7 +130,7 @@ sub emailheaders
 	# @Description	Required email headers
 	# @Param 	<None>
 	# @Return	(Ref->Array) Header names
-	my $class = shift();
+	my $class = shift;
 	return [ 'X-Failed-Recipients' ];
 }
 
@@ -144,9 +144,9 @@ sub reperit
 	# @Param <ref>	(Ref->Hash) Message header
 	# @Param <ref>	(Ref->String) Message body
 	# @Return	(String) Pseudo header content
-	my $class = shift();
-	my $mhead = shift() || return q();
-	my $mbody = shift() || return q();
+	my $class = shift;
+	my $mhead = shift || return q();
+	my $mbody = shift || return q();
 
 	#   ____                 _ _ 
 	#  / ___|_ __ ___   __ _(_) |
@@ -188,8 +188,21 @@ sub reperit
 	#	mation about the cause of this error. The error that the other server re-
 	#	turned was: 450 450 4.2.2 <mailboxfull@example.jp>... Mailbox Full (state 14).
 	#
-	return q() unless( $mhead->{'from'} =~ $RxFromGmail->{'from'} );
-	return q() unless( $mhead->{'subject'} =~ $RxFromGmail->{'subject'} );
+	#   -- OR --
+	#
+	#	Delivery to the following recipient failed permanently:
+	#	
+	#	     userunknown@example.jp
+	#	
+	#	Technical details of permanent failure:=20
+	#	Google tried to deliver your message, but it was rejected by the server for=
+	#	 the recipient domain example.jp by mx.example.jp. [192.0.2.59].
+	#	
+	#	The error that the other server returned was:
+	#	550 5.1.1 <userunknown@example.jp>... User Unknown
+	#
+	return q() unless $mhead->{'from'} =~ $RxFromGmail->{'from'};
+	return q() unless $mhead->{'subject'} =~ $RxFromGmail->{'subject'};
 
 	my $phead = q();	# (String) Pusedo header
 	my $pbody = q();	# (String) Boby part for rewriting
@@ -206,7 +219,7 @@ sub reperit
 
 	if( defined $mhead->{'x-failed-recipients'} )
 	{
-		$rcptintxt = $1 if( $mhead->{'x-failed-recipients'} =~ m{\A[ ]?(.+[@].+)[ ]*\z}i );
+		$rcptintxt = $1 if $mhead->{'x-failed-recipients'} =~ m{\A[ ]?(.+[@].+)[ ]*\z}i;
 	}
 
 	EACH_LINE: foreach my $el ( split( qq{\n}, $$mbody ) )
@@ -219,6 +232,15 @@ sub reperit
 			# ation about the cause of this error. The error that the other server return=
 			# ed was: 554 554 5.7.0 Header error (state 18).
 			#
+			# -- OR --
+			#
+			# Technical details of permanent failure:=20
+			# Google tried to deliver your message, but it was rejected by the server for=
+			# the recipient domain example.jp by mx.example.jp. [192.0.2.49].
+			#
+			# The error that the other server returned was:
+			# 550 5.1.1 <userunknown@example.jp>... User Unknown
+			#
 			$el =~ s{=\z}{};
 			if( $el =~ m{\A\s+(.+[@].+)\z} )
 			{
@@ -227,14 +249,15 @@ sub reperit
 			}
 			else
 			{
+				next if $el =~ $RxFromGmail->{'endof'};
 				$rhostsaid .= $el;
 			}
-			next();
+			next;
 		}
 	}
 
 	return q() unless $rhostsaid;
-	$rhostsaid =~ s/\A.*$RxFromGmail->{'begin'}.+$RxFromGmail->{'error'} //;
+	$rhostsaid =~ s/\A.*$RxFromGmail->{'begin'}.+$RxFromGmail->{'error'} ?//;
 	$rhostsaid =~ s/([(]state \d+[)][.]).+\z/$1/;
 	$rhostsaid =~ y{ }{}s;
 
@@ -253,8 +276,11 @@ sub reperit
 	else
 	{
 		$rcptintxt ||= Kanadzuchi::Address->canonify($rhostsaid);
-		$rcptintxt ||= $1 if( $rhostsaid =~ m{\s+([^\s]+[@][^\s]+)\s+[(]state \d+[)][.]\z} );
+		$rcptintxt ||= $1 if $rhostsaid =~ m{\s+([^\s]+[@][^\s]+)\s+[(]state \d+[)][.]\z};
 	}
+
+	# New format of a bounce mail from Google, there is no (state xx).
+	$statintxt ||= $1 if $rhostsaid =~ m{([45][.]\d[.]\d+)};
 
 	if( ! $statintxt || $statintxt =~ m{\A[45][.]0[.]0\z} )
 	{
@@ -312,12 +338,12 @@ sub reperit
 	}
 
 	return q() unless $rcptintxt;
-	$phead .= __PACKAGE__->xsmtpcommand($xsmtp);
+	$phead .= __PACKAGE__->xsmtpcommand( $xsmtp );
 	$phead .= __PACKAGE__->xsmtpagent();
-	$phead .= __PACKAGE__->xsmtpdiagnosis($rhostsaid);
-	$phead .= __PACKAGE__->xsmtpstatus($pstat);
-	$phead .= __PACKAGE__->xsmtprecipient($rcptintxt);
-	$phead .= q(To: ).$rcptintxt.qq(\n);
+	$phead .= __PACKAGE__->xsmtpdiagnosis( $rhostsaid );
+	$phead .= __PACKAGE__->xsmtpstatus( $pstat );
+	$phead .= __PACKAGE__->xsmtprecipient( $rcptintxt );
+	$phead .= 'To: '.$rcptintxt.qq(\n);
 
 	return $phead;
 }

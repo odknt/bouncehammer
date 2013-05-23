@@ -1,5 +1,5 @@
-# $Id: Cellphone.pm,v 1.1.2.1 2011/03/09 07:22:56 ak Exp $
-# Copyright (C) 2009-2011 Cubicroot Co. Ltd.
+# $Id: Cellphone.pm,v 1.1.2.3 2013/04/16 09:07:09 ak Exp $
+# Copyright (C) 2009-2013 Cubicroot Co. Ltd.
 # Kanadzuchi::Mail::Group::
 #                                                             
 #   ####        ###  ###         ##                           
@@ -22,8 +22,7 @@ use warnings;
 # Major cellular phone provider's domains in The World
 sub nominisexemplaria
 {
-	# *** NOT TESTED YET ***
-	my $class = shift();
+	my $class = shift;
 	return {
 		'globalstar' => [
 			# Globalstar; http://globalstar.com/
@@ -38,7 +37,7 @@ sub nominisexemplaria
 
 sub classisnomina
 {
-	my $class = shift();
+	my $class = shift;
 	return {
 		'globalstar'	=> 'Generic',
 		'iridium'	=> 'Generic',

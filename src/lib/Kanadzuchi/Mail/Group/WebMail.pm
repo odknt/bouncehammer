@@ -1,10 +1,10 @@
-# $Id: WebMail.pm,v 1.14.2.11 2012/09/28 05:52:05 ak Exp $
+# $Id: WebMail.pm,v 1.14.2.13 2013/04/16 09:07:41 ak Exp $
 # -Id: AOL.pm,v 1.1 2009/08/29 07:33:21 ak Exp -
 # -Id: Google.pm,v 1.1 2009/08/29 07:33:22 ak Exp -
 # -Id: Hotmail.pm,v 1.1 2009/08/29 07:33:22 ak Exp -
 # -Id: WebBased.pm,v 1.2 2009/09/03 18:45:31 ak Exp -
 # -Id: Yahoo.pm,v 1.2 2009/12/01 10:33:29 ak Exp -
-# Copyright (C) 2009-2012 Cubicroot Co. Ltd.
+# Copyright (C) 2009-2013 Cubicroot Co. Ltd.
 # Kanadzuchi::Mail::Group::
                                                    
  ##  ##         ##     ##  ##           ##  ###    
@@ -28,7 +28,7 @@ use warnings;
 #  * http://en.wikipedia.org/wiki/Comparison_of_webmail_providers
 sub nominisexemplaria
 {
-	my $class = shift();
+	my $class = shift;
 	return {
 		'aol' => [
 			# AOL; America OnLine
@@ -78,14 +78,16 @@ sub nominisexemplaria
 			qr{\Ahotmail[.](?:ie|it|jp|la|lt|lu|lv|ly|mn|mw|my|nl|no|ph|pl|pn|pt)\z},
 			qr{\Ahotmail[.](?:rs|se|sg|sh|sk|ua|vu)\z},
 			qr{\Ahotmail[.]co[.](?:at|hu|id|il|in|it|jp|kr|nz|pn|th|ug|uk|ve|za)\z},
-			qr{\Ahotmail[.]com[.](?:ar|au|bo|br|do|hk|my|ph|pl|ru|sg|tr|tt|tw|uz|ve|vn)\z},
+			qr{\Ahotmail[.]com[.](?:ar|au|bo|br|do|hk|ly|my|ph|pl|ru|sg|tr|tt|tw|uz|ve|vn)\z},
 			qr{\Alive[.](?:at|be|ca|ch|cl|cn|de|dk|fi|fr|hk|ie|in|it|jp|lu|nl|no|ph|ru|se)\z},
 			qr{\Alive[.]co[.](?:hu|in|it|kr|uk|za)\z},
 			qr{\Alive[.]com[.](?:ar|au|co|mx|my|pe|ph|pk|pt|sg|ve)\z},
 			qr{\Amsn[.](?:cn|fi|fr|hu|it|nl)\z},
 			qr{\Amsnhotmail[.]nl\z},
-			qr{\Awindowslive[.](?:es|fi|fr|hu|it|nl)\z},
-			qr{\Aoutook[.]com[.](?:fr|hu)\z},
+			qr{\Awindowslive[.](?:es|fi|fr|hu|it|mp|nl)\z},
+			qr{\Aoutlook[.](?:at|be|bg|bz|cl|cm|co|de|dk|ec|fr|hn|ht|hu|ie|it|jp)\z},
+			qr{\Aoutlook[.](?:kr|la|lv|mx|my|pa|ph|pk|pt|ro|sa|sg|si|sk|uy)\z},
+			qr{\Aoutlook[.]com[.](?:ar|au|br|es|fr|gr|hr|pe|py|tr|ua|vn)\z},
 		],
 		'myspace' => [
 			# MySpace Mail has over 15 million users.
@@ -122,7 +124,7 @@ sub nominisexemplaria
 
 sub classisnomina
 {
-	my $class = shift();
+	my $class = shift;
 	return {
 		'aol'		=> 'Generic',
 		'apple'		=> 'Generic',
