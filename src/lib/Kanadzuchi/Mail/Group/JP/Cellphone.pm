@@ -1,4 +1,4 @@
-# $Id: Cellphone.pm,v 1.7 2010/11/13 19:14:32 ak Exp $
+# $Id: Cellphone.pm,v 1.7.2.3 2011/01/18 06:35:24 ak Exp $
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi::Mail::Group::JP::
                                                             
@@ -32,12 +32,24 @@ sub nominisexemplaria
 			qr{\Aezweb[.]ne[.]jp\z},
 			qr{\A[0-9a-z]{2}[.]ezweb[.]ne[.]jp\z},
 			qr{\A[0-9a-z][-0-9a-z]{0,8}[0-9a-z][.]biz[.]ezweb[.]ne[.]jp\z},
+			qr{\Aido[.]ne[.]jp\z},
+			qr{\Aez[a-j][.]ido[.]ne[.]jp\z},
 		],
 		'softbank'  => [
 			qr{\Asoftbank[.]ne[.]jp\z},
 			qr{\A[dhtcrksnq][.]vodafone[.]ne[.]jp\z},
 			qr{\Ajp-[dhtcrksnq][.]ne[.]jp\z},
+		],
+		'disney' => [
+			# MVNO, Disney Mobile; http://disneymobile.jp/
 			qr{\Adisney[.]ne[.]jp\z},
+		],
+		'vertu' => [
+			# MVNO, VERTU; http://www.vertu.com/jp-jp/home
+			qr{\Avertuclub[.]ne[.]jp\z},
+		],
+		'tu-ka' => [
+			qr{\Asky[.](?:tkk|tkc|tu-ka)[.]ne[.]jp\z},
 		],
 	};
 }
@@ -49,6 +61,8 @@ sub classisnomina
 		'nttdocomo'	=> 'Generic',
 		'aubykddi'	=> 'Generic',
 		'softbank'	=> 'Generic',
+		'vertu'		=> 'Generic',
+		'tu-ka'		=> 'Generic',
 	};
 }
 

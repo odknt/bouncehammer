@@ -1,5 +1,5 @@
 [%- SET tt_showssearchcond = 'none' -%]
-<div id = 'jx_queryform'>
+<div id = 'jx_queryform' style = 'margin: 0 0 8px 0;'>
 	<form action = '[% pv_scriptname %]/search/recipient' method = 'POST'>
 	<fieldset>
 		<legend>[%- tt_desc.searchbyemail -%]</legend>
@@ -10,10 +10,8 @@
 		<span class = 'shortdescription'>[%- tt_desc.emptyaddress -%]</span>
 
 		<div style = 'margin: 6px 0 4px -2px;'>
-			<span class = 'flatbutton'>
-				<a href = '#' onClick = "toggleIt('jx_search-condition');" 
-					accesskey = '9'>&nbsp; [% tt_word.searchcond %] &nbsp; </a>
-			</span>
+			<span id = 'jx_search-condition-sign' class = 'toggle-sign'
+				onClick = "toggleIt('jx_search-condition'); toggleSign(this);">+</span>[% tt_word.searchcond %]
 		</div>
 
 		<div id = 'jx_search-condition' style = 'display: [% tt_showssearchcond %];'> 
@@ -89,6 +87,17 @@
 					<td class = 'extra' id = 'jx_checkmd'></td>
 				</tr>
 
+				<tr>
+					<td class = 'key'>[%- tt_term.frequency -%]</td>
+					<td class = 'value'>
+						<span style = 'font-size: 13px;'><strong>&gt;=</strong></span>
+						<input type = 'text' name = 'fe_frequency' style = 'width: 72px;' class = 'wide'
+							placeholder = '[%- tt_term.frequency -%]'
+							autosave = '[% pv_systemname %].frequency ' results = '16'
+							onChange = "jx_checkfq.innerHTML = '&#9745; [%- tt_word.use -%]';"/>
+					</td>
+					<td class = 'extra' id = 'jx_checkfq'></td>
+				</tr>
 
 				<tr>
 					<td class = 'key'>[%- tt_term.bounced -%]</td>

@@ -1,4 +1,4 @@
-# $Id: Search.pm,v 1.32 2010/10/05 11:18:18 ak Exp $
+# $Id: Search.pm,v 1.32.2.2 2011/01/15 21:02:08 ak Exp $
 # -Id: Search.pm,v 1.1 2009/08/29 09:30:33 ak Exp -
 # -Id: Search.pm,v 1.11 2009/08/13 07:13:58 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -69,6 +69,8 @@ sub onlinesearch
 	my $downloadx = 0;	# (Boolean) Flag; Download 
 	my $advancedx = 0;	# (Boolean) Flag; Does advanced search use?
 	my $dbrecords = 0;	# (Integer) The number of records in the db
+	my $howrecent = -1;	# (Integer) How recent the mail bounced?
+	my $frequency = 1;	# (Integer) Frequency
 	my $paginated = new Kanadzuchi::BdDR::Page();
 	my $bouncelog = new Kanadzuchi::BdDR::BounceLogs::Table('handle' => $bddr->handle());
 	my $cgiqueryp = $self->query();
@@ -188,6 +190,7 @@ sub onlinesearch
 			require Kanadzuchi::Time;
 			$wherecond->{'bounced'} = 
 				Kanadzuchi::Time->to_second($cgiqueryp->param('fe_howrecent'));
+			$howrecent = int( time - $wherecond->{'bounced'} );
 
 			if( $wherecond->{'bounced'} > 0 && $wherecond->{'bounced'} < time )
 			{
@@ -196,6 +199,17 @@ sub onlinesearch
 			else
 			{
 				$wherecond->{'bounced'} = { '>=' => 0 };
+			}
+		}
+
+		# Frequency
+		if( $cgiqueryp->param('fe_frequency') )
+		{
+			$frequency = $cgiqueryp->param('fe_frequency');
+			if( $frequency > 1 )
+			{
+				$wherecond->{'frequency'} = { '>=' => $frequency };
+				$advancedx++;
 			}
 		}
 
@@ -441,6 +455,22 @@ sub onlinesearch
 			$damnedobj->{'bounced'} .=
 				' '.$o->timezoneoffset() if( $o->timezoneoffset() );
 			push( @$logrecord, $damnedobj );
+		}
+
+		# Build date string in where condition
+		if( $howrecent > 0 )
+		{
+			my $tp = Time::Piece->new( $howrecent );
+			warn $tp->epoch;
+			warn $tp->cdate;
+			$wherecond->{'bounced'}->{'sign'} = '>=';
+			$wherecond->{'bounced'}->{'date'} = $tp->ymd().'('.$tp->wdayname().') '.$tp->hms();
+		}
+
+		if( $frequency > 1 )
+		{
+			$wherecond->{'frequency'}->{'sign'} = '>=';
+			$wherecond->{'frequency'}->{'freq'} = $frequency;
 		}
 
 		$self->tt_params( 
