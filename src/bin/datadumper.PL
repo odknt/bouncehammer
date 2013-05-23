@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: datadumper.PL,v 1.6 2010/03/04 23:18:20 ak Exp $
+# $Id: datadumper.PL,v 1.8 2010/03/19 07:38:53 ak Exp $
 # -Id: datadumper.PL,v 1.16 2010/02/21 20:09:01 ak Exp -
 # -Id: datadumper.PL,v 1.3 2009/08/31 06:57:18 ak Exp -
 # -Id: datadumper.pl,v 1.9 2009/08/27 05:09:59 ak Exp -
@@ -37,6 +37,7 @@ use Error ':try';
 my $Zci = undef();		# Kanadzuchi System object
 my $Cmd = undef();		# Kanadzuchi::UI::CLI object
 my $Rdb = undef();		# Kanadzuchi::RDB object
+my $Fmt = undef();		# Output format
 
 my $CLIOPTION = {
 	'conf'		=> ( 1 << 0 ),
@@ -267,7 +268,7 @@ if( $Cmd->operation & $Cmd->option->{'usedb'} )
 						'count'	=> scalar(@{$dumpeddata}),
 						'entities' => $dumpeddata,
 						'device' => q{STDOUT},
-						'format' => q{yaml}, );
+						'format' => $Fmt, );
 
 			if( $pageconfig->{'currentpagenum'} == 1 )
 			{
@@ -339,6 +340,7 @@ sub parse_options
 		$_opt_comment,
 		$_opt_alldata,
 		$_opt_test,
+		$_opt_silent,
 		$_opt_verbose,
 	);
 
@@ -352,6 +354,7 @@ sub parse_options
 			'test'		=> \$_opt_test,
 			'T'		=> \$_opt_test,
 			'help'		=> sub { help(); exit(0); },
+			'silent'	=> \$_opt_silent,
 			'verbose'	=> \$_opt_verbose,
 			'v+'		=> \$_opt_verbose,
 			'version'	=> sub { printf(STDERR "%s\n", $Zci->version()); exit(0); },
@@ -391,8 +394,9 @@ sub parse_options
 		);
 
 
-	# (verbose|debug) mode
+	# (verbose|debug|silent) mode
 	$Cmd->debuglevel( ( $_opt_verbose ? $_opt_verbose : 0 ) - 1 );
+	$Cmd->silent( $_opt_silent ? 1 : 0 );
 
 	# Specify Config File(YAML)
 	if( defined($_opt_conf) )
@@ -442,6 +446,19 @@ sub parse_options
 	if( $_opt_count ){ $_operation |= $Cmd->option->{'count'}; }
 	if( $_opt_comment ){ $_operation |= $Cmd->option->{'comment'}; }
 
+	# Output format options
+	if( $_opt_format )
+	{
+		my $_1stcharacter = substr( $_opt_format, 0, 1 );
+		$Fmt =  $_1stcharacter eq q(y) ? q(yaml) :
+			$_1stcharacter eq q(j) ? q(json) : q(yaml);
+	}
+	else
+	{
+		# Default Log format is 'YAML' -Fy
+		$Fmt = q(yaml);
+	}
+
 	return($_operation);
 }
 
@@ -477,17 +494,20 @@ sub help
 	printf( STDERR "    --comment                  : Add comment in the head of the results.\n");
 	printf( STDERR "\n" );
 	printf( STDERR " * DATABASE SPEC OPTIONS(Overrides the value in config file)\n" );
-	printf( STDERR "    --type <d>          : DB Type, p:Postgres, m:MySQL, s=SQLite .\n");
-	printf( STDERR "    --host <hostname>   : DB Host name or IP address.\n");
-	printf( STDERR "    --port <portnum>    : DB Host port number.\n");
+	printf( STDERR "    --type <d>                 : DB Type, p:Postgres, m:MySQL, s=SQLite .\n");
+	printf( STDERR "    --host <hostname>          : DB Host name or IP address.\n");
+	printf( STDERR "    --port <portnum>           : DB Host port number.\n");
 	printf( STDERR "\n" );
 	printf( STDERR " * OTHER OPTIONS\n" );
-	printf( STDERR "    -C, --conf <config> : Location of the configuration file used instead of \n");
-	printf( STDERR "                          __KANADZUCHIETC__/bouncehammer.cf\n");
-	printf( STDERR "    -T, --test          : Test mode, same as ``-C /path/to/test-run.cf''\n");
-	printf( STDERR "    -v, --verbose       : Run in verbose mode, -vv is more verbose, -vvv is more.\n");
-	printf( STDERR "    --help              : Print help message(This screen)\n");
-	printf( STDERR "    --version           : Print version number.\n");
+	printf( STDERR "    -C, --conf <config>        : Location of the configuration file used instead of \n");
+	printf( STDERR "                                 __KANADZUCHIETC__/bouncehammer.cf\n");
+	printf( STDERR "    -T, --test                 : Test mode, same as ``-C /path/to/test-run.cf''\n");
+	printf( STDERR "    -F, --format <char>        : Output format, the following are available.\n");
+	printf( STDERR "                                 [y]aml = Default, [j]son, and [a]sciitable\n");
+	printf( STDERR "    --silent                   : Silent mode, All MESSAGES WILL NOT BE DISPLAYED.\n");
+	printf( STDERR "    -v, --verbose              : Run in verbose mode, -vv is more verbose, -vvv is more.\n");
+	printf( STDERR "    --help                     : Print help message(This screen)\n");
+	printf( STDERR "    --version                  : Print version number.\n");
 	printf( STDERR "\n" );
 	printf( STDERR " * Examples\n" );
 	printf( STDERR "  %s --alldata --count\n", $Cmd->calledfrom() );

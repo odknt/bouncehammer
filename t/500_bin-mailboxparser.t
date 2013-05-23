@@ -1,4 +1,4 @@
-# $Id: 500_bin-mailboxparser.t,v 1.13 2010/03/04 23:19:15 ak Exp $
+# $Id: 500_bin-mailboxparser.t,v 1.15 2010/03/19 07:40:39 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -7,11 +7,11 @@
 use lib qw(./t/lib ./dist/lib ./src/lib);
 use strict;
 use warnings;
-use Test::More ( tests => 57 );
+use Test::More ( tests => 66 );
 
 SKIP: {
 	eval{ require IPC::Cmd; }; 
-	skip('Because no IPC::Cmd for testing',57) if($@);
+	skip('Because no IPC::Cmd for testing',66) if($@);
 
 	use Kanadzuchi::Test::CLI;
 	use Kanadzuchi;
@@ -83,6 +83,16 @@ SKIP: {
 			'option' => $O.q( -Fa ),
 			'count' => 0,
 		},
+		{
+			'name' => 'Format is JSON, -Fj',
+			'option' => $O.q( -Fj ),
+			'count' => 37,
+		},
+		{
+			'name' => 'Two-way, -2',
+			'option' => $O.q( -2 ),
+			'count' => 37,
+		},
 	];
 
 	#  ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
@@ -95,7 +105,7 @@ SKIP: {
 		ok( $E->syntax(), q{->syntax()} );
 		ok( $E->version(), q{->version()} );
 		ok( $E->help(), q{->help()} );
-		# avoid: ok( $E->error(), q{->error()} );
+		ok( $E->error(), q{->error()} );
 	}
 
 	ERROR_MESSAGES: {
