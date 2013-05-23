@@ -1,27 +1,26 @@
-# $Id: Makefile.am,v 1.3 2010/03/23 20:07:46 ak Exp $
-# Copyright (C) 2009,2010 Cubicroot Co. Ltd.
-# This is the auto-Makefile for BounceHammer/src/libexec,
+# $Id: Makefile.am,v 1.3.2.7 2011/06/03 10:32:30 ak Exp $
+# Copyright (C) 2009-2011 Cubicroot Co. Ltd.
+# This is the auto-Makefile for bounceHammer/src/libexec,
 # is processed by automake to create Makefile.in.
 
-modules = mp-startup.pl
+libexec_SCRIPTS = mp-startup.pl
 distdir = $(BUILDROOT)/dist/libexec
 instdir = @libexecdir@
-all-am: distlib
-distlib:
+
+$(libexec_SCRIPTS):
 	test -d $(distdir) || mkdir -p $(distdir)
-	$(CAT) $(modules) | $(SED) \
+	$(CAT) $@.IN | $(SED) \
 		-e 's|__KANADZUCHIROOT__|@prefix@|g' \
 		-e 's|__PERLEXECUTABLE__|!$(PERL)|g' \
-		-e 's|\([^:]\)//|\1/|g' > $(distdir)/$(modules)
-
-install-am: distlib
-	test -d $(instdir) || mkdir -p $(instdir)
-	$(INSTALL) -c -m 0755 $(distdir)/$(modules) $(instdir)/
-
-uninstall-am:
-	rm -f $(instdir)/$(modules)
+		-e 's|__PERLEXTERNALLIB__|$(PERL_EXTLIB)|g' \
+		-e 's|\([^:]\)//|\1/|g' > $@.tmp
+	mv $@.tmp $@
+	test "X$(PERL_EXTLIB)" = "X" || \
+		( $(GREP) -v PERL_EXTLIB $@ > $@.tmp && mv $@.tmp $@ )
+	cp -Rp $@ $(distdir)/
 
 .PHONY: clean
 clean:
-	rm -f $(distdir)/$(modules)
+	rm -f *.X *.tmp $(libexec_SCRIPTS)
+	rm -f $(distdir)/*
 
