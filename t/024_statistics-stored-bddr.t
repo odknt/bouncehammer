@@ -1,4 +1,4 @@
-# $Id: 024_statistics-stored-bddr.t,v 1.4 2010/08/16 12:06:40 ak Exp $
+# $Id: 024_statistics-stored-bddr.t,v 1.7 2010/10/26 03:46:25 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -10,7 +10,7 @@ use warnings;
 use Kanadzuchi::Test;
 use Kanadzuchi::Statistics::Stored::BdDR;
 use List::Util;
-use Test::More ( tests => 1139 );
+use Test::More ( tests => 1169 );
 
 #  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 # ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -43,7 +43,7 @@ PREPROCESS: {
 # 5 tests
 
 SKIP: {
-	my $howmanyskips = 1134;
+	my $howmanyskips = 1164;
 	eval { require DBI; }; skip( 'Because no DBI for testing', $howmanyskips ) if( $@ );
 	eval { require DBD::SQLite; }; skip( 'Because no DBD::SQLite for testing', $howmanyskips ) if( $@ );
 

@@ -1,4 +1,4 @@
-# $Id: 033_mta-qmail.t,v 1.1 2010/07/07 04:42:44 ak Exp $
+# $Id: 033_mta-qmail.t,v 1.2 2010/10/05 11:30:56 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -54,7 +54,7 @@ REPERIT: {
 		ok( $el, $el ) if( $el =~ m{X-SMTP-Command: [A-Z]{4}} );
 		ok( $el, $el ) if( $el =~ m{Final-Recipient: } );
 		ok( $el, $el ) if( $el =~ m{Status: } );
-		ok( $el, $el ) if( $el =~ m{Diagnostic-Code: } );
+		ok( $el, $el ) if( $el =~ m{X-Diagnosis: } );
 	}
 }
 
