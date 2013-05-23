@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: tablectl.PL,v 1.6 2010/03/19 07:38:54 ak Exp $
+# $Id: tablectl.PL,v 1.8 2010/03/25 15:49:14 ak Exp $
 # -Id: tablectl.PL,v 1.12 2010/02/21 20:09:01 ak Exp -
 # -Id: tablectl.PL,v 1.1 2009/08/29 14:36:53 ak Exp -
 # -Id: tablectl.PL,v 1.9 2009/08/27 05:09:59 ak Exp -
@@ -35,12 +35,12 @@ use Error ':try';
 # ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
 #
-my $Zci = undef();		# Kanadzuchi System object
-my $Cmd = undef();		# Kanadzuchi::UI::CLI object
-my $Rdb = undef();		# Kanadzuchi::RDB object
-my $Tab = undef();		# Master table, Kanadzuchi::RDB::Table::* object
-my $Fmt = undef();		# Fotmat
-my $Given = {};			# Hash reference for $Tab
+my $Zci;		# (Kanadzuchi) System object
+my $Cmd;		# (Kanadzuchi::UI::CLI) Commandline object
+my $Rdb;		# (Kanadzuchi::RDB) Database object
+my $Tab;		# (Kanadzuchi::RDB::Table::*) Master table object
+my $Fmt;		# (String) Output fotmat
+my $Given = {};		# (Ref->Hash) $Tab
 
 my $CLIOPTION = {
 	'conf'		=> ( 1 << 0 ),
@@ -112,6 +112,7 @@ if( $Cmd->operation & $Cmd->option->{'usedb'} )
 		{
 			# Create master table object(Tab)
 			$Tab = Kanadzuchi::RDB::MasterTable->newtable( $Rdb->table() );
+			Kanadzuchi::Exception::Database->throw( '-text' => 'No such table' ) unless( defined($Tab) );
 		}
 		else
 		{
@@ -177,8 +178,8 @@ if( $Cmd->operation & $Cmd->option->{'usedb'} )
 		#  ___) | |___| |___| |__| |___  | |_  | |___ | | ___) || |  
 		# |____/|_____|_____|_____\____| |_( ) |_____|___|____/ |_|  
 		#                                  |/
-		my $_resultset = undef();		# DBIx::Class::ResultSet object
-		my $_objasctab = undef();		# Text::ASCIITable object
+		my $_resultset;				# (DBIx::Class::ResultSet) Resultset object
+		my $_objasctab;				# (Text::ASCIITable) ASCII Table object
 		my $_fieldname = \$Tab->field();	# Fieldname in the table
 
 		$Cmd->d(2,sprintf("Execute 'SELECT', Print the list\n"));
@@ -392,11 +393,6 @@ if( $Cmd->operation & $Cmd->option->{'usedb'} )
 $Cmd->finish();
 
 
-
-
-
-
-
 #  _____ _   _ _   _  ____ _____ ___ ___  _   _ ____  
 # |  ___| | | | \ | |/ ___|_   _|_ _/ _ \| \ | / ___| 
 # | |_  | | | |  \| | |     | |  | | | | |  \| \___ \ 
@@ -593,8 +589,8 @@ sub help
 	printf( STDERR "\n" );
 	printf( STDERR " * Examples\n" );
 	printf( STDERR "  %s -C./test-run.cf -Tw --list -Fa\n", $Cmd->calledfrom() );
-	printf( STDERR "  %s -Ts --insert --name 'example.jp' --discription 'Ex' -v\n", $Cmd->calledfrom() );
-	printf( STDERR "  %s -Ts --update --id 2 --discription 'My Domain'\n", $Cmd->calledfrom() );
+	printf( STDERR "  %s -ts --insert --name 'example.jp' --discription 'Ex' -v\n", $Cmd->calledfrom() );
+	printf( STDERR "  %s -ts --update --id 2 --discription 'My Domain'\n", $Cmd->calledfrom() );
 	printf( STDERR "\n" );
 	return(1);
 }

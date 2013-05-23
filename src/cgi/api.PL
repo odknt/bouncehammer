@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: api.PL,v 1.3 2010/03/03 05:53:52 ak Exp $
+# $Id: api.PL,v 1.5 2010/03/26 07:17:51 ak Exp $
 # -Id: api.PL,v 1.5 2010/02/21 20:11:18 ak Exp -
 # -Id: api.cgi,v 1.3 2009/10/06 00:36:28 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -13,46 +13,30 @@ package Kanadzuchi::API::CGI;
 use lib '__KANADZUCHIROOT__/lib';
 use strict;
 use warnings;
-use CGI::Application::Dispatch;
+use Kanadzuchi::API::Dispatch;
 
-#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
-# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
-# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
-#
-my $Settings = {
-	coreconfig	=> '__KANADZUCHIETC__/bouncehammer.cf',
-	webconfig	=> '__KANADZUCHIETC__/webui.cf',
-	mailboxparser	=> '__KANADZUCHIBIN__/mailboxparser',
-	databasectl	=> '__KANADZUCHIBIN__/databasectl',
-	template	=> '__KANADZUCHIDATA__/template',
-};
-
-#  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
-# ||D |||i |||s |||p |||a |||t |||c |||h |||       |||T |||a |||b |||l |||e ||
-# ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
-#
-my $dispatchtables = [
-	'empty'		=> { 'app' => 'API::HTTP', 'rm' => 'Empty' },
-	'query/:token?' => { 'app' => 'API::HTTP', 'rm' => 'Query' },
-];
-
-my $dispatchargs_to_new = {
-	TMPL_PATH => [],
-	PARAMS => {
-		'cf' => $Settings->{'coreconfig'},
-		'wf' => $Settings->{'webconfig'},
-		'px' => $Settings->{'mailboxparser'},
-		'cx' => $Settings->{'databasectl'},
+my $SystemArgs = Kanadzuchi::API::Dispatch->dispatch_args();
+my $UseMyConfs = 0;	# 1=Use $MySettings, 0=Don't use it
+my $MySettings = {
+	'PARAMS' => {
+		'cf' => '/path/to/my/custom/bouncehammer.cf',
+		'wf' => '/path/to/my/custom/webui.cf',
 	},
+	'TMPL_PATH' => [],
 };
 
-CGI::Application::Dispatch->dispatch(
-		prefix	=> 'Kanadzuchi',
-		default	=> 'empty',
-		table	=> $dispatchtables,
-		args_to_new => $dispatchargs_to_new,
-	);
+foreach my $x ( 'cf', 'wf' )
+{
+	last() unless( $UseMyConfs );
+	$UseMyConfs = 0 unless( defined($MySettings->{'PARAMS'}->{$x}) );
+	$UseMyConfs = 0 unless( -r $MySettings->{'PARAMS'}->{$x} && -s _ );
+}
+
+Kanadzuchi::API::Dispatch->dispatch(
+	'prefix' => $SystemArgs->{'prefix'},
+	'default' => $SystemArgs->{'default'},
+	'table' => $SystemArgs->{'table'},
+	'args_to_new' => $UseMyConfs ? $MySettings : $SystemArgs->{'args_to_new'},
+);
 
 __END__

@@ -1,4 +1,4 @@
-# $Id: Test.pm,v 1.14 2010/03/01 23:42:12 ak Exp $
+# $Id: Test.pm,v 1.17 2010/03/29 04:36:03 ak Exp $
 # -Id: Test.pm,v 1.1 2009/08/29 09:30:33 ak Exp -
 # -Id: Test.pm,v 1.10 2009/08/17 12:39:31 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -73,9 +73,9 @@ sub parse_ontheweb
 		my $temporaryf = q();
 		my $tmpmailbox = undef();
 
-		$temporaryf .= $self->{'settings'}->{'file'}->{'templog'}->{'prefix'}.q(-draw.);
+		$temporaryf .= $self->{'sysconfig'}->{'file'}->{'templog'}->{'prefix'}.q(-webui.);
 		$temporaryf .= time().q(.).$ENV{'REMOTE_ADDR'}.q(.).sprintf("%4x",$ENV{'REMOTE_PORT'}).$$.q(.);
-		$temporaryf .= (rand(8) * 1000).q(.).$self->{'settings'}->{'file'}->{'templog'}->{'suffix'};
+		$temporaryf .= (rand(8) * 1000).q(.).$self->{'sysconfig'}->{'file'}->{'templog'}->{'suffix'};
 		$tmpmailbox = new Path::Class::File( qq{$temporaryd/$temporaryf} );
 
 		my $givenemail = q();	# Email file name
@@ -148,7 +148,7 @@ sub parse_ontheweb
 				$pseudofrom = q();
 				$pastedmail = $cgiq->param('emailtext');
 				$pastedmail =~ s{(\x0d\x0a|\x0d|\x0a)}{\n}gm;	# CRLF, CR -> LF
-				
+
 				# Add Pseudo 'From' line
 				if( $pastedmail =~ m{\AFrom: .+ [@]ezweb[.]ne[.]jp[>]?\z}m )
 				{
@@ -246,7 +246,7 @@ sub parse_ontheweb
 			eval{ $tmpmailbox->remove(); };
 			last();
 		} # End of while(1)
-		
+
 		$self->tt_params( 
 			'bouncemessages' => $aref,
 			'parseddatatext' => $parseddata,

@@ -2,11 +2,12 @@
 <div id = 'queryform'>
 	<form action = '[% scriptname %]/search/recipient' method = 'POST'>
 	<fieldset>
-		<legend>受信者(To)アドレスで検索(3)</legend>
+		<legend>受信者(宛先,To)アドレスで検索(3)</legend>
 		<input type = 'text' name = 'recipient' accesskey = '3' style = 'width: 430px;' class = 'wide'
 			placeholder = '受信者(To)アドレス' autosave = '[% systemname %].recipient' results = '16' />
 		<input type = 'submit' value = '検索(4)' id = 'dosearch' accesskey = '4' class = 'flatbutton' />
 		<input type = 'reset' value = '消去(0)' accesskey = '0' class = 'flatbutton' /><br />
+		<span class = 'shortdescription'>メールアドレスが空の場合は全てのデータが表示されます。</span>
 
 		<div style = 'margin: 8px 8px 4px 8px;'>
 			<a href = "javascript:void(0)" onClick = "toggleIt('search-condition');"
@@ -95,7 +96,7 @@
 				<tr>
 					<td class = 'key'>並び順</td>
 					<td class = 'value'>
-						<fieldset style = 'border-width: 1px;'>
+						<fieldset style = 'border-width: 1px; line-height: 16px;'>
 							<legend>項目名</legend>
 							<span><input type = 'radio' name = 'orderby' value = 'id' checked /> ID</span> &nbsp; &nbsp; 
 							<span><input type = 'radio' name = 'orderby' value = 'addresser' /> 発信者アドレス</span> &nbsp; &nbsp; 
@@ -121,7 +122,7 @@
 					<td class = 'key'>表示件数/頁</td>
 					<td class = 'value'>
 						<select name = 'resultsperpage' id = 'resultsperpage'>
-							[%- FOREACH RPP IN [5,10,25,50,75,100] -%]
+							[%- FOREACH RPP IN [10,25,50,75,100] -%]
 								<option value = '[%- RPP -%]' [%- IF RPP == 10 -%] selected [%- END -%]>
 									[% RPP %]
 								</option>
@@ -142,10 +143,14 @@
 								if( this.checked == true ){
 									disableIt('resultsperpage');
 									dosearch.value = 'ダウンロード(4)';
+									enableIt('yamlff');
+									enableIt('jsonff');
 								}
 								else{
 									enableIt('resultsperpage');
 									dosearch.value = '検索(4)';
+									disableIt('yamlff');
+									disableIt('jsonff');
 								}"/>
 						検索結果をダウンロードする
 					</td>
@@ -157,7 +162,10 @@
 					<td class = 'value'>
 						<fieldset style = 'border-width: 1px;'>
 							<legend>形式</legend>
-							<span><input type = 'radio' name = 'downloadformat' value = 'yaml' checked /> YAML</span> &nbsp; &nbsp; 
+							<span><input id = 'yamlff' type = 'radio' name = 'downloadformat' value = 'yaml' disabled checked />
+								YAML</span> &nbsp; &nbsp; 
+							<span><input id = 'jsonff' type = 'radio' name = 'downloadformat' value = 'json' disabled />
+								JSON</span> &nbsp; &nbsp; 
 						</fieldset>
 					</td>
 					<td class = 'extra' id = 'checkff'></td>

@@ -8,8 +8,8 @@
 	</script>
 	<style type = 'text/css'>
 	<!--
-		[% INCLUDE bouncehammer.css %]
-		[% INCLUDE record.css %]
+	[% INCLUDE bouncehammer.css %]
+	[% INCLUDE testparse.css %]
 	-->
 	</style>
 	[%- SET DOPARSE = 'Parse' -%]
@@ -51,10 +51,10 @@
 							<tr>
 								<td class = 'key'>e-Mail(mbox) file</td>
 								<td class = 'value'>
-									<input type = 'file' name = 'emailfile' style = 'border: 1px dotted #b2b2b2; padding: 4px;'
+									<input type = 'file' name = 'emailfile' class = 'emailfile'
 										onChange = "checkef.innerHTML = '&#9745; Use'; doparse.disabled = false;" />&nbsp; 
 									[%- IF maxsize == 0 -%]
-										<strong> &lt; Unlimit </strong>
+										<strong> == Unlimit </strong>
 									[%- ELSE -%]
 										<strong> &lt; [% maxsize %] Bytes </strong>
 									[%- END -%]
@@ -74,9 +74,8 @@
 										<a href = "javascript:void(0);" onClick = "toggleIt('emailtextarea');">Show</a>
 									</span><br />
 									<textarea name = 'emailtext' id = 'emailtextarea' onKeyUp = "doparse.disabled = false;"
-										onChange = "checket.innerHTML = '&#9745; Use';"
-										style = 'width: 420px; height: 384px; display: none; border: 1px dotted #b2b2b2;
-											margin: 4px 0; padding: 0 0 0 1px; overflow-y: auto;'></textarea>
+										onChange = "checket.innerHTML = '&#9745; Use';" class = 'emailtext' 
+										style = 'display: none;' rows = '24' cols = '48'></textarea>
 								</td>
 								<td class = 'extra' id = 'checket'> </td>
 							</tr>
@@ -87,10 +86,11 @@
 									First 
 									<select name = 'parsenmessages' onChange = "doparse.disabled = false;">
 										<option value = '1' >1</option>
-										<option value = '3' selected>3</option>
+										<option value = '3' >3</option>
 										<option value = '5' >5</option>
+										<option value = '10' selected>10</option>
 									</select>
-									Messages in a mailbox
+									Messages in the mailbox
 								</td>
 								<td class = 'extra' id = 'checkof'> </td>
 							</tr>
@@ -99,28 +99,32 @@
 								<td class = 'key'>Output Format</td>
 								<td class = 'value'>
 									<span><input type = 'radio' name = 'format' value = 'html' checked /> HTML</span> &nbsp; 
-									<!--
 									<span><input type = 'radio' name = 'format' value = 'yaml' /> YAML</span> &nbsp; 
-									<span><input type = 'radio' name = 'format' value = 'asciitable' /> ASCII Table</span> &nbsp; 
-									-->
+									<span><input type = 'radio' name = 'format' value = 'json' /> JSON</span> &nbsp; 
 								</td>
 								<td class = 'extra' id = 'checkof'> </td>
 							</tr>
 
 							<tr>
-								<td class = 'key'>Register into DB</td>
+								<td class = 'key'>Insert into DB</td>
 								<td class = 'value'>
 									<input type = 'checkbox' name = 'register' />
-									Register results into BounceLogs database after parsing.
+									Insert the results into BounceLogs database after parsing.<br />
+									<span class = 'shortdescription'>The sender domain must exist in the
+										<a href = '[% scriptname %]/tables/senderdomain'>SenderDomains</a> table.
+									</span>
 								</td>
 								<td class = 'extra'></td>
 							</tr>
 
 							<tr>
-								<td style = 'margin: 4px 0;'>
+								<td class = 'key' style = 'margin: 4px 0;'>
 									<br />
-									<input type = 'submit' id = 'doparse' value = '[% DOPARSE %]' class = 'flatbutton' disabled />&nbsp;
-									<input type = 'reset' value = 'Reset' class = 'flatbutton' />&nbsp;
+									<input type = 'submit' id = 'doparse' value = '[% DOPARSE %]' class = 'flatbutton' disabled />
+								</td>
+								<td class = 'value'></td>
+								<td class = 'extra'>
+									<input type = 'reset' value = 'Reset' class = 'flatbutton' />
 								</td>
 							</tr>
 						</tbody>
@@ -129,10 +133,9 @@
 				</form>
 			</div>
 
-			<div style = 'margin: 12px 0; padding: 0;'>
-				<iframe name = 'parseddata' id = 'parseddata' frameborder = '1' width = '794'
-					height = '1' marginheight = '0' marginwidth = '0' 
-					style = 'border: 0px solid; margin: 0;'></iframe>
+			<div style = 'margin: 12px 1px; padding: 0;'>
+				<iframe name = 'parseddata' id = 'parseddata' frameborder = '0' width = '605'
+					height = '1' marginheight = '0' marginwidth = '0' ></iframe>
 			</div>
 		</div>
 		<div id = 'South-Ward'>

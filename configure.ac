@@ -1,11 +1,11 @@
 dnl #                                               -*- Autoconf -*-
 dnl # Process this file with autoconf to produce a configure script.
-dnl # $Id: configure.ac,v 1.15 2010/03/19 07:38:19 ak Exp $
+dnl # $Id: configure.ac,v 1.24 2010/03/26 08:13:10 ak Exp $
 dnl # -Id: configure.ac,v 1.8 2009/12/01 10:35:23 ak Exp -
 dnl # -Id: configure.ac,v 1.35 2009/08/27 05:09:04 ak Exp -
 dnl # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 AC_PREREQ(2.61)
-AC_INIT([BounceHammer], [2.1.0], [bugs@bouncehammer.jp])
+AC_INIT([BounceHammer], [2.2.0], [bugs@bouncehammer.jp])
 AM_INIT_AUTOMAKE([foreign])
 AC_PREFIX_DEFAULT(/usr/local/bouncehammer)
 AC_CANONICAL_HOST
@@ -24,15 +24,13 @@ AC_PATH_PROG(SHELL, sh, :, /bin:/usr/bin:/usr/local/bin)
 
 AC_PROG_LN_S
 AC_PATH_PROG(CAT, cat, :, /bin:/usr/bin:/usr/local/bin)
-AC_PATH_PROG(XARGS, xargs, :, /bin:/usr/bin:/usr/local/bin)
 AC_PATH_PROG(CHMOD, chmod, :, /bin:/usr/bin:/usr/local/bin)
-AC_PATH_PROG(CHOWN, chown, :, /bin:/usr/bin:/usr/local/bin)
 AC_PATH_PROG(TOUCH, touch, :, /bin:/usr/bin:/usr/local/bin)
-AC_PATH_PROGS(SQLITE, sqlite sqlite3, :, /bin:/usr/bin:/usr/local/bin)
+AC_PATH_PROG(PATCH, patch, :, /bin:/usr/bin:/usr/local/bin)
 
-AC_PROG_AWK
-if test "x$AWK" = x; then
-	AC_MSG_ERROR([*** Cannot find awk])
+AC_PATH_PROGS(GREP, grep egrep, :, /bin:/usr/bin:/usr/local/bin)
+if test "x$GREP" = x; then
+	AC_MSG_ERROR([*** Cannot find grep program(grep, egrep)])
 fi
 
 AC_PATH_PROG(FIND, find, :, /bin:/usr/bin:/usr/local/bin)
@@ -43,11 +41,6 @@ fi
 AC_PATH_PROG(SED, sed, :, /bin:/usr/bin:/usr/local/bin)
 if test "x$SED" = x; then
 	AC_MSG_ERROR([*** Cannot find sed program])
-fi
-
-AC_PATH_PROGS(GREP, grep egrep, :, /bin:/usr/bin:/usr/local/bin)
-if test "x$GREP" = x; then
-	AC_MSG_ERROR([*** Cannot find grep program(grep, egrep)])
 fi
 
 AC_ARG_ENABLE(debug,
@@ -122,42 +115,53 @@ else
 	mkdir -p ./dist
 fi
 
-
+dnl # Check perl implementation
+AC_MSG_CHECKING(for perl -T and -B operator on filehandles)
+PI_TBOPERATOR=`$PERL ./Implement.PL tb`
+if test -n "$PI_TBOPERATOR" ; then
+	AC_MSG_RESULT(no $PI_TBOPERATOR)
+	PI_IMPLEMENT_TB=NO
+	AC_SUBST(PI_IMPLEMENT_TB)
+else
+	AC_MSG_RESULT(yes)
+	PI_IMPLEMENT_TB=YES
+fi
 
 dnl # Checks for header files.
 
 dnl # Checks for typedefs, structures, and compiler characteristics.
 
 dnl # Checks for library functions.
-AC_CONFIG_FILES([Makefile
-			src/Makefile
-			src/bin/Makefile
-			src/cgi/Makefile
-			src/etc/Makefile
-			src/lib/Kanadzuchi/API/Makefile
-			src/lib/Kanadzuchi/Archive/Makefile
-			src/lib/Kanadzuchi/Config/Makefile
-			src/lib/Kanadzuchi/Mail/Bounced/Makefile
-			src/lib/Kanadzuchi/Mail/Group/JP/Makefile
-			src/lib/Kanadzuchi/Mail/Group/Makefile
-			src/lib/Kanadzuchi/Mail/Makefile
-			src/lib/Kanadzuchi/Mail/Stored/Makefile
-			src/lib/Kanadzuchi/Mail/Why/Makefile
-			src/lib/Kanadzuchi/Makefile
-			src/lib/Kanadzuchi/Mbox/Makefile
-			src/lib/Kanadzuchi/RDB/Makefile
-			src/lib/Kanadzuchi/RDB/Schema/Makefile
-			src/lib/Kanadzuchi/RDB/Table/Makefile
-			src/lib/Kanadzuchi/UI/Makefile
-			src/lib/Kanadzuchi/UI/Web/Makefile
-			src/lib/Makefile
-			src/sql/Makefile
-			template/Makefile
-			template/standard/Makefile
-			template/standard/element/Makefile
-			template/standard/help/Makefile
-			template/standard/javascript/Makefile
-			template/standard/page/Makefile
-			template/standard/stylesheet/Makefile])
 
+AC_CONFIG_FILES([Makefile
+                 src/Makefile
+                 src/bin/Makefile
+                 src/cgi/Makefile
+                 src/etc/Makefile
+                 src/lib/Kanadzuchi/API/Makefile
+                 src/lib/Kanadzuchi/Archive/Makefile
+                 src/lib/Kanadzuchi/Config/Makefile
+                 src/lib/Kanadzuchi/Mail/Bounced/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/JP/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/Makefile
+                 src/lib/Kanadzuchi/Mail/Makefile
+                 src/lib/Kanadzuchi/Mail/Stored/Makefile
+                 src/lib/Kanadzuchi/Mail/Why/Makefile
+                 src/lib/Kanadzuchi/Makefile
+                 src/lib/Kanadzuchi/Mbox/Makefile
+                 src/lib/Kanadzuchi/RDB/Makefile
+                 src/lib/Kanadzuchi/RDB/Schema/Makefile
+                 src/lib/Kanadzuchi/RDB/Table/Makefile
+                 src/lib/Kanadzuchi/UI/Makefile
+                 src/lib/Kanadzuchi/UI/Web/Makefile
+                 src/lib/Makefile
+                 src/libexec/Makefile
+                 src/sql/Makefile
+                 template/Makefile
+                 template/standard/Makefile
+                 template/standard/element/Makefile
+                 template/standard/help/Makefile
+                 template/standard/javascript/Makefile
+                 template/standard/page/Makefile
+                 template/standard/stylesheet/Makefile])
 AC_OUTPUT

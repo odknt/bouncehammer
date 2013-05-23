@@ -1,4 +1,4 @@
-/* $Id: bouncehammer.css,v 1.4 2010/03/07 02:09:38 ak Exp $ */
+/* $Id: bouncehammer.css,v 1.9 2010/03/29 04:37:01 ak Exp $ */
 /* Copyright 2009,2010 Cubicroot Co. Ltd. */
 
 /* IDs */
@@ -66,8 +66,9 @@
 	width: 880px;
 	margin: 4px 0 4px 0;
 	padding: 8px;
+	font-weight: bold;
 	color: #524e4d; /* Keshizumi-iro */
-	background: #e5e4e6; /* Shiraumenezu */
+	background: #eaf4fc; /* Geppaku */
 	border-color: #d4dcd6;	/* Sobakiri-iro */
 	border-width: 0px;
 	border-style: solid;
@@ -90,6 +91,10 @@
 	-opera-border-radius: 6px;
 }
 
+#Legal a {
+	color: #727171; /* Nibi-iro */
+}
+
 p#Copyright, p#Product, p#License {
 	display: inline;
 }
@@ -100,31 +105,6 @@ p#Copyright, p#Product, p#License {
 	font-size: 10px;
 	vertical-align: middle;
 	text-align: right;
-}
-
-#ChooseFile {
-	font-size: 10px;
-}
-
-div#search-condition {
-	background: #f8fbf8; /* Hakuji */
-	padding: 8px 2px;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
-	-opera-border-radius: 4px;
-}
-
-div#search-condition div.subgroup {
-	margin-top: 12px;
-	padding-top: 12px;
-	border-width: 1px 0 0 0;
-	border-style: solid;
-	border-color: #d4dcd6;	/* Sobakiri-iro */
-}
-
-div#search-query {
-	background: #f8f4e6; /* Zouge-iro */
-	padding: 8px;
 }
 
 /* HTML Elements */
@@ -303,6 +283,11 @@ input.flatbutton:hover {
 	color: #007bbb; /* Kompeki */
 }
 
+input.flatbutton[disabled], input.flatbutton[disabled]:hover {
+	color: #afafb0; /* Gin-nezu */
+	border-color: #d4dcd6;	/* Sobakiri-iro */
+}
+
 /* Anchor pseudo classes in flatbutton class */
 .flatbutton a:hover, .flatbutton a:visited:hover {
 	color: #007bbb; /* Kompeki */
@@ -359,6 +344,22 @@ ul.index a:visited {
 	text-decoration: none; 
 }
 
+span.warnings {
+	color: #c9171e; /* Kokihi */
+}
+
+span.shortdescription {
+	font-size: 10px;
+	margin: 2px 0 2px 16px;
+	color: #5383c3; /* Usugunjou */
+}
+
+span.shortdescription a {
+	color: #3e62ad;	/* Kakitsubata */
+	font-weight: bold;
+	text-decoration: underline;
+}
+
 p.description { 
 	margin: 2px 1px 1px 2px;
 	padding: 1px 1px 2px 2px;
@@ -410,45 +411,6 @@ div.result p.exception {
 	-moz-border-radius: 4px;
 	-opera-border-radius: 4px;
 }
-
-div.result .upload-summary {
-	margin: 2px 0;
-	padding: 4px;
-	background: #fbfaf5; /* Kinari-iro */
-	border-style: solid;
-	border-width: 1px;
-	border-color: #7b7c7d; /* Namari-iro */
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
-	-opera-border-radius: 4px;
-}
-
-
-/* Reason classes */
-span.reason {
-	border-style: solid;
-	border-width: 2px;
-	border-color: #16160e; /* Ankokushoku */
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
-	-opera-border-radius: 4px;
-}
-span.undefined		{ background: #222222; }
-span.userunknown	{ background: #e2041b; }
-span.hostunknown	{ background: #e83929; }
-span.hasmoved		{ background: #ee7800; }
-span.filtered		{ background: #ea5506; }
-span.mailboxfull	{ background: #b8d200; }
-span.exceedlimit	{ background: #c3d825; }
-span.systemfull		{ background: #00a497; }
-span.notaccept		{ background: #0094c8; }
-span.mesgtoobig		{ background: #007b43; }
-span.suspend		{ background: #752100; }
-span.mailererror	{ background: #44617b; }
-span.securityerr	{ background: #1e50a2; }
-span.whitelisted	{ border-color: #888888; background: #eeeeee; }
-span.unstable		{ background: #674196; }
-span.onhold		{ background: #595857; }
 
 /* Other text */
 span.errortext		{ color: #cc0000; }

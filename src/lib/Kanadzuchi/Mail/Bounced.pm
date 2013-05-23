@@ -1,4 +1,4 @@
-# $Id: Bounced.pm,v 1.5 2010/03/01 23:41:51 ak Exp $
+# $Id: Bounced.pm,v 1.11 2010/04/15 08:40:16 ak Exp $
 # -Id: Returned.pm,v 1.10 2010/02/17 15:32:18 ak Exp -
 # -Id: Returned.pm,v 1.2 2009/08/29 19:01:18 ak Exp -
 # -Id: Returned.pm,v 1.15 2009/08/21 02:44:15 ak Exp -
@@ -22,6 +22,7 @@ use base 'Kanadzuchi::Mail';
 use strict;
 use warnings;
 use Kanadzuchi::Address;
+use Kanadzuchi::RFC1893;
 use Kanadzuchi::RFC2822;
 use Kanadzuchi::Time;
 use Time::Piece;
@@ -85,8 +86,9 @@ sub eatit
 	if( $confx->{'verbose'} > 0 )
 	{
 		eval{	require Term::ProgressBar; 
-			$vmprogress = Term::ProgressBar->new({ 'fh' => \*STDERR, 'ETA' => q(linear),
-					'name' => q(Parse mbox), 'count' => $$mailx->nmesgs() });
+			$vmprogress = Term::ProgressBar->new({ 'fh' => \*STDERR, 
+					'ETA' => q(linear), 'name' => q(Parse mailbox),
+					'count' => $$mailx->nmesgs() });
 		};
 	}
 
@@ -131,7 +133,7 @@ sub eatit
 
 			# There is no recipient address, skip.
 			next(BUILD) unless( @$tempemails );
-			map { $_ =~ y{[`'"()<>\r\n$]}{}d; $_ =~ s{\s}{,}g; } @$tempemails;
+			map { $_ =~ y{[`'"()<>\r\n$]}{}d; $_ =~ s{\s}{,}g; $_ =~ s{;.+\z}{}g; } @$tempemails;
 
 			RECIPIENTS: foreach my $_e ( @{ Kanadzuchi::Address->parse($tempemails) } )
 			{
@@ -142,7 +144,9 @@ sub eatit
 				}
 			}
 
-			$tempheader->{'recipient'} ||= Kanadzuchi::Address->new($tempheader->{'expanded'});
+			$tempheader->{'recipient'} ||= $tempheader->{'expanded'} 
+							? Kanadzuchi::Address->new($tempheader->{'expanded'})
+							: q();
 			next(BUILD) unless( $tempheader->{'recipient'} );
 			$bouncemesg->{'recipient'} = $tempheader->{'recipient'};
 		}
@@ -181,7 +185,7 @@ sub eatit
 			}
 
 			next(BUILD) unless( @$tempemails );
-			map { $_ =~ y{[`'"()<>\r\n$]}{}d; $_ =~ s{\s}{,}g; } @$tempemails;
+			map { $_ =~ y{[`'"()<>\r\n$]}{}d; $_ =~ s{\s}{,}g; $_ =~ s{;.+\z}{}g; } @$tempemails;
 
 
 			ADDRESSER: foreach my $_e ( @{ Kanadzuchi::Address->parse($tempemails) } )
@@ -261,6 +265,13 @@ sub eatit
 			next() unless( $tempheader->{'arrivaldate'} );
 			chomp($tempheader->{'arrivaldate'});
 
+			# Check strange Date header
+			if( $tempheader->{'arrivaldate'} =~ m{\A\s*(\d{2}\s*[A-Z][a-z]{2}\s*\d{4}\s*.+\z)} )
+			{
+				# qmail's Date header, 'Date: 29 Apr 2009 01:39:00 -0000'
+				$tempheader->{'arrivaldate'} = q(Thu, ).$tempheader->{'arrivaldate'};
+			}
+
 			if( $tempheader->{'arrivaldate'} =~ m{\A\s*(.+)\s*([-+]\d{4}).*\z} )
 			{
 				# Convert from the time zone offset to the second
@@ -288,7 +299,7 @@ sub eatit
 		#
 		unless( $bouncemesg->{'action'} )
 		{
-			$tempstring = $mimeentity->get('Action') || next();
+			$tempstring = $mimeentity->get('Action') || q{Failed};
 			chomp($tempstring);
 			next(BUILD) unless( lc($tempstring) eq q{failed} );
 		}
@@ -313,13 +324,13 @@ sub eatit
 				'bounced' => int( $tempstring->epoch() - $tempoffset ),
 			);
 
-		# $thisobject->{'hostgroup'} = $thisobject->get_hostgroup();
 		$thisobject->{'reason'} = $thisobject->tellmewhy();
 
 		if( grep( { $_ == 1 } values( %{$confx->{'skip'}} ) ) )
 		{
 			next() if( $confx->{'skip'}->{ $thisobject->{'reason'} } );
 			next() if( $confx->{'skip'}->{'norelaying' } && ( $thisobject->is_norelaying() ) );
+			next() if( $confx->{'skip'}->{'temperror' } && ( $thisobject->is_temperror() ) );
 		}
 
 		push( @$mesgpieces, $thisobject );
@@ -358,11 +369,11 @@ sub tellmewhy
 	elsif( $self->is_hostunknown()   ){ $rwhy = 'hostunknown'; }
 	elsif( $self->is_mailboxfull()   ){ $rwhy = 'mailboxfull'; }
 	elsif( $self->is_toobigmesg()    ){ $rwhy = 'mesgtoobig'; }
+	elsif( $self->is_exceedlimit()   ){ $rwhy = 'exceedlimit'; }
 	elsif( $self->is_securityerror() ){ $rwhy = 'securityerr'; }
 	elsif( $self->is_mailererror()   ){ $rwhy = 'mailererror'; }
 	elsif( $self->is_onhold()        ){ $rwhy = 'onhold'; }
-	else                              { $rwhy = 'undefined'; }
-
+	else{ $rwhy = $self->is_somethingelse() ? $self->{'reason'} : 'undefined'; }
 	return($rwhy);
 }
 
@@ -378,23 +389,38 @@ sub is_filtered
 	#		(Integer) 0 = is not filtered recipient.
 	my $self = shift();
 	my $stat = $self->{'deliverystatus'} || return(0);
+	my $subj = 'filtered';
 	my $isfi = 0;
-	my $flib = undef();
 
 	if( defined($self->{'reason'}) && length($self->{'reason'}) )
 	{
-		$isfi = 1 if( $self->{'reason'} eq 'filtered' );
+		$isfi = 1 if( $self->{'reason'} eq $subj );
 	}
 	else
 	{
-		# PC/spam filter
-		#   Status: 5.1.3
-		#   Diagnostic-Code: SMTP; 553 sorry, that domain isn't in my list of allowed rcpthosts (#5.7.1)
-		#   Diagnostic-Code: SMTP; 553 sorry, your don't authenticate or 
-		#                    the domain isn't in my list of allowed rcpthosts(#5.7.1)
-		eval { use Kanadzuchi::Mail::Why::Filtered; };
-		$flib = q|Kanadzuchi::Mail::Why::Filtered|;
-		$isfi = 1 if( $stat == 513 || $flib->is_included($self->{diagnosticcode}) );
+		if( $stat == Kanadzuchi::RFC1893->standardcode($subj) )
+		{
+			$isfi = 1;
+		}
+		elsif( $stat == Kanadzuchi::RFC1893->internalcode($subj) )
+		{
+			$isfi = 1;
+		}
+		else
+		{
+			eval { use Kanadzuchi::Mail::Why::Filtered; };
+			my $flib = q|Kanadzuchi::Mail::Why::Filtered|;
+
+			if( $stat == 513 || $flib->is_included($self->{diagnosticcode}) )
+			{
+				# PC/spam filter
+				#   Status: 5.1.3
+				#   Diagnostic-Code: SMTP; 553 sorry, that domain isn't in my list of allowed rcpthosts (#5.7.1)
+				#   Diagnostic-Code: SMTP; 553 sorry, your don't authenticate or 
+				#                    the domain isn't in my list of allowed rcpthosts(#5.7.1)
+				$isfi = 1;
+			}
+		}
 	}
 	return($isfi);
 }
@@ -412,11 +438,12 @@ sub is_userunknown
 	# @See		http://www.ietf.org/rfc/rfc2822.txt
 	my $self = shift();
 	my $stat = $self->{'deliverystatus'} || return(0);
+	my $subj = 'userunknown';
 	my $isuu = 0;
 
 	if( defined($self->{'reason'}) && length($self->{'reason'}) )
 	{
-		$isuu = 1 if( $self->{'reason'} eq 'userunknown' );
+		$isuu = 1 if( $self->{'reason'} eq $subj );
 	}
 	else
 	{
@@ -429,7 +456,7 @@ sub is_userunknown
 			use Kanadzuchi::Mail::Why::RelayingDenied; 
 		};
 
-		if( $stat == 511 )
+		if( $stat == Kanadzuchi::RFC1893->standardcode($subj) )
 		{
 			# *.1.1 = 'Bad destination mailbox address'
 			#   Status: 5.1.1
@@ -437,17 +464,24 @@ sub is_userunknown
 			#     Recipient address rejected: User unknown in local recipient table
 			$isuu = 1 unless( $rclass->is_included($dicode) );
 		}
-		elsif( int( $stat / 100 ) == 5 )
+		elsif( $stat == Kanadzuchi::RFC1893->internalcode($subj) )
 		{
-			$isuu = 1 if( $uclass->is_included($dicode) );
+			$isuu = 1 unless( $rclass->is_included($dicode) );
 		}
-		elsif( int( $stat / 100 ) == 4 )
+		else
 		{
-			# Postfix Virtual Mail box
-			# Status: 4.4.7
-			# Diagnostic-Code: SMTP; 450 4.1.1 <***@example.jp>:
-			#   Recipient address rejected: User unknown in virtual mailbox table
-			$isuu = 1 if( $uclass->is_included($dicode) );
+			if( int( $stat / 100 ) == 5 )
+			{
+				$isuu = 1 if( $uclass->is_included($dicode) );
+			}
+			elsif( int( $stat / 100 ) == 4 )
+			{
+				# Postfix Virtual Mail box
+				# Status: 4.4.7
+				# Diagnostic-Code: SMTP; 450 4.1.1 <***@example.jp>:
+				#   Recipient address rejected: User unknown in virtual mailbox table
+				$isuu = 1 if( $uclass->is_included($dicode) );
+			}
 		}
 	}
 	return($isuu);
@@ -466,22 +500,33 @@ sub is_hostunknown
 	# @See		http://www.ietf.org/rfc/rfc2822.txt
 	my $self = shift();
 	my $stat = $self->{'deliverystatus'} || return(0);
+	my $subj = 'hostunknown';
 	my $ishu = 0;
 
 	if( defined($self->{reason}) && length($self->{reason}) )
 	{
-		$ishu = 1 if( $self->{reason} eq 'hostunknown' );
+		$ishu = 1 if( $self->{reason} eq $subj );
 	}
 	else
 	{
-		my $hclass = q|Kanadzuchi::Mail::Why::HostUnknown|;
-		my $dicode = $self->{'diagnosticcode'};
+		if( $stat == Kanadzuchi::RFC1893->standardcode($subj) )
+		{
+			# Status: 5.1.2
+			# Diagnostic-Code: SMTP; 550 Host unknown
+			$ishu = 1;
+		}
+		elsif( $stat == Kanadzuchi::RFC1893->internalcode($subj) )
+		{
+			$ishu = 1;
+		}
+		else
+		{
+			my $hclass = q|Kanadzuchi::Mail::Why::HostUnknown|;
+			my $dicode = $self->{'diagnosticcode'};
 
-		eval { use Kanadzuchi::Mail::Why::HostUnknown; };
-
-		# Status: 5.1.2
-		# Diagnostic-Code: SMTP; 550 Host unknown
-		$ishu = 1 if( $stat == 512 || $hclass->is_included($dicode) );
+			eval { use Kanadzuchi::Mail::Why::HostUnknown; };
+			$ishu = 1 if( $hclass->is_included($dicode) );
+		}
 	}
 	return($ishu);
 }
@@ -499,21 +544,32 @@ sub is_mailboxfull
 	# @See		http://www.ietf.org/rfc/rfc2822.txt
 	my $self = shift();
 	my $stat = $self->{'deliverystatus'} || return(0);
+	my $subj = 'mailboxfull';
 	my $ismf = 0;
 
 	if( defined($self->{'reason'}) && length($self->{'reason'}) )
 	{
-		$ismf = 1 if( $self->{'reason'} eq 'mailboxfull' );
+		$ismf = 1 if( $self->{'reason'} eq $subj );
 	}
 	else
 	{
-		if( $stat == 422 || $stat == 522 )
+		foreach my $c ( 'temporary', 'permanent' )
 		{
-			# Status: 4.2.2
-			# Diagnostic-Code: SMTP; 450 4.2.2 <***@example.jp>... Mailbox Full
-			$ismf = 1;
+			if( $stat == Kanadzuchi::RFC1893->standardcode($subj,$c) )
+			{
+				# Status: 4.2.2
+				# Diagnostic-Code: SMTP; 450 4.2.2 <***@example.jp>... Mailbox Full
+				$ismf = 1;
+				last();
+			}
+			elsif( $stat == Kanadzuchi::RFC1893->internalcode($subj,$c) )
+			{
+				$ismf = 1;
+				last();
+			}
 		}
-		else
+
+		if( $ismf == 0 )
 		{
 			my $mclass = q|Kanadzuchi::Mail::Why::MailboxFull|;
 			my $dicode = $self->{'diagnosticcode'};
@@ -523,6 +579,50 @@ sub is_mailboxfull
 		}
 	}
 	return($ismf);
+}
+
+sub is_exceedlimit
+{
+	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	# |i|s|_|e|x|c|e|e|d|l|i|m|i|t|
+	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	#
+	# @Description	exceed limit or not
+	# @Param	<None>
+	# @Return	(Integer) 1 = The message size exceeds limit
+	#		(Integer) 0 = is not
+	# @See		http://www.ietf.org/rfc/rfc2822.txt
+	my $self = shift();
+	my $stat = $self->{'deliverystatus'} || return(0);
+	my $subj = 'exceedlimit';
+	my $isxl = 0;
+
+	if( defined($self->{'reason'}) && length($self->{'reason'}) )
+	{
+		$isxl = 1 if( $self->{'reason'} eq $subj );
+	}
+	else
+	{
+		if( $stat == Kanadzuchi::RFC1893->standardcode($subj) )
+		{
+			# Status: 5.2.3
+			# Diagnostic-Code: SMTP; 552 5.2.3 Message size exceeds fixed maximum message size
+			$isxl = 1;
+		}
+		elsif( $stat == Kanadzuchi::RFC1893->internalcode($subj) )
+		{
+			$isxl = 1;
+		}
+		else
+		{
+			my $bclass = q|Kanadzuchi::Mail::Why::ExceedLimit|;
+			my $dicode = $self->{'diagnosticcode'};
+			eval { use Kanadzuchi::Mail::Why::ExceedLimit; };
+
+			$isxl = 1 if( $bclass->is_included($dicode) );
+		}
+	}
+	return($isxl);
 }
 
 sub is_toobigmesg
@@ -538,18 +638,23 @@ sub is_toobigmesg
 	# @See		http://www.ietf.org/rfc/rfc2822.txt
 	my $self = shift();
 	my $stat = $self->{'deliverystatus'} || return(0);
+	my $subj = 'mesgtoobig';
 	my $istb = 0;
 
 	if( defined($self->{'reason'}) && length($self->{'reason'}) )
 	{
-		$istb = 1 if( $self->{'reason'} eq 'mesgtoobig' );
+		$istb = 1 if( $self->{'reason'} eq $subj );
 	}
 	else
 	{
-		if( $stat == 534 )
+		if( $stat == Kanadzuchi::RFC1893->standardcode($subj) )
 		{
 			# Status: 5.3.4
 			# Diagnostic-Code: SMTP; 552 5.3.4 Error: message file too big
+			$istb = 1;
+		}
+		elsif( $stat == Kanadzuchi::RFC1893->internalcode($subj) )
+		{
 			$istb = 1;
 		}
 		else
@@ -605,15 +710,20 @@ sub is_securityerror
 	# @See		http://www.ietf.org/rfc/rfc2822.txt
 	my $self = shift();
 	my $stat = $self->{'deliverystatus'} || return(0);
+	my $subj = 'securityerr';
 	my $isse = 0;
 
 	if( defined($self->{'reason'}) && length($self->{'reason'}) )
 	{
-		$isse = 1 if( $self->{'reason'} eq 'securityerr' );
+		$isse = 1 if( $self->{'reason'} eq $subj );
 	}
 	else
 	{
-		if( int($stat/10) == 57 )
+		if( (int($stat/10) * 10) == Kanadzuchi::RFC1893->standardcode($subj) )
+		{
+			$isse = 1;
+		}
+		elsif( $stat == Kanadzuchi::RFC1893->internalcode($subj) )
 		{
 			$isse = 1;
 		}
@@ -634,24 +744,78 @@ sub is_mailererror
 	# @See		http://www.ietf.org/rfc/rfc2822.txt
 	my $self = shift();
 	my $stat = $self->{'deliverystatus'} || return(0);
+	my $diag = $self->{'diagnosticcode'} || q();
+	my $subj = 'mailererror';
 	my $isme = 0;
-	my $erex = {};
+	my $rxme = qr{x[-]unix[;][ ]\d{1,3}};
 
 	if( defined($self->{'reason'}) && length($self->{'reason'}) )
 	{
-		$isme = 1 if( $self->{'reason'} eq 'mailererror' );
+		$isme = 1 if( $self->{'reason'} eq $subj );
 	}
 	else
 	{
-		# Regular expressions of 'unknown mailer error'
-		$erex->{'mailererror'} = qr{x[-]unix[;][ ]\d{1,3}};
-
-		if( $stat == 500 && ( lc($self->{'diagnosticcode'}) =~ $erex->{'mailererror'} ) )
+		if( $stat == Kanadzuchi::RFC1893->standardcode($subj) && lc($diag) =~ $rxme )
 		{
 			$isme = 1;
 		}
 	}
 	return($isme);
+}
+
+sub is_somethingelse
+{
+	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	# |i|s|_|s|o|m|e|t|h|i|n|g|e|l|s|e|
+	# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	#
+	# @Description	Reason is something else?
+	# @Param	<None>
+	# @Return	(Integer) 1 = Something else
+	#		(Integer) 0 = Unknown reason...
+	my $self = shift();
+	my $stat = $self->{'deliverystatus'} || return(0);
+	my $diag = q();
+	my $else = q();
+	return(1) if( $self->{'reason'} );
+
+	foreach my $c ( 'temporary', 'permanent' )
+	{
+		if( $stat == Kanadzuchi::RFC1893->standardcode('hasmoved',$c) ||
+			$stat == Kanadzuchi::RFC1893->internalcode('hasmoved',$c) ){
+
+			$else = 'hasmoved';
+			$diag = 'Mailbox has moved';
+			last();
+		}
+		elsif( $stat == Kanadzuchi::RFC1893->standardcode('systemfull',$c) ||
+			$stat == Kanadzuchi::RFC1893->internalcode('systemfull',$c) ){
+
+			$else = 'systemfull';
+			$diag = 'Mail system full';
+			last();
+		}
+	}
+
+	unless($else)
+	{
+		if( $stat == Kanadzuchi::RFC1893->standardcode('notaccept') ||
+			$stat == Kanadzuchi::RFC1893->internalcode('notaccept') ){
+
+			$else = 'notaccept';
+			$diag = 'System not accepting network messages';
+		}
+		elsif( $stat == 547 || $stat == 447 )
+		{
+			$diag = 'Delivery time expired';
+		}
+	}
+
+	$self->{'reason'} ||= $else;
+	$self->{'description'}->{'diagnosticcode'} ||= $diag;
+
+	return(1) if( $self->{'reason'} );
+	return(0);
 }
 
 sub is_onhold
@@ -666,13 +830,14 @@ sub is_onhold
 	#		(Integer) 0 = is not
 	my $self = shift();
 	my $stat = $self->{'deliverystatus'} || return(0);
+	my $subj = 'onhold';
 
 	if( defined($self->{'reason'}) && length($self->{'reason'}) )
 	{
-		return(1) if( $self->{'reason'} eq 'onhold' );
+		return(1) if( $self->{'reason'} eq $subj );
 	}
 
-	return(1) if( $stat == 599 );
+	return(1) if( $stat == Kanadzuchi::RFC1893->standardcode($subj) );
 	return(0);
 }
 

@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: datadumper.PL,v 1.8 2010/03/19 07:38:53 ak Exp $
+# $Id: datadumper.PL,v 1.11 2010/04/02 11:40:03 ak Exp $
 # -Id: datadumper.PL,v 1.16 2010/02/21 20:09:01 ak Exp -
 # -Id: datadumper.PL,v 1.3 2009/08/31 06:57:18 ak Exp -
 # -Id: datadumper.pl,v 1.9 2009/08/27 05:09:59 ak Exp -
@@ -34,10 +34,10 @@ use Error ':try';
 # ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
 #
-my $Zci = undef();		# Kanadzuchi System object
-my $Cmd = undef();		# Kanadzuchi::UI::CLI object
-my $Rdb = undef();		# Kanadzuchi::RDB object
-my $Fmt = undef();		# Output format
+my $Zci;		# (Kanadzuchi) System object
+my $Cmd;		# (Kanadzuchi::UI::CLI) Commandline object
+my $Rdb;		# (Kanadzuchi::RDB) Database object
+my $Fmt;		# (String) Output format
 
 my $CLIOPTION = {
 	'conf'		=> ( 1 << 0 ),
@@ -161,11 +161,9 @@ if( $Cmd->operation & $Cmd->option->{'usedb'} )
 	require Kanadzuchi::RDB::Schema::BounceLogs;
 
 	# Arguments of searchandnew() method
-	my $whereconds = {};		# Where conditions
-	my $pageconfig = {};		# Pager configuration
-	my $dumpeddata = [];		# (Ref->Array) Dumped results
-	my $objhlogger = undef();	# K::Log object
-	my $reqsobject = 0;		# Requires object
+	my $whereconds = {};		# (Ref->Hash) Where conditions
+	my $pageconfig = {};		# (Ref->Hash) Pager configuration
+	my $reqsobject = 0;		# (Integer) Flag; Requires object
 
 	# Check parameters: recipient, senderdomain, destination, hostgroup, and reason
 	foreach my $_key ( keys(%$WhereCondition) )
@@ -248,9 +246,13 @@ if( $Cmd->operation & $Cmd->option->{'usedb'} )
 		# | |_| | |_| | |  | |  __/ 
 		# |____/ \___/|_|  |_|_|    
 		#                           
+		my $dumpeddata = [];		# (Ref->Array) Dumped results
+		my $objhlogger = undef();	# (Kanadzuchi::Log) Log object
+		my $linesapage = 500;		# (Integer) How many lines a page
+
 		$reqsobject = 1;
-		$pageconfig->{'resultsperpage'} = int($pageconfig->{'totalentries'}/10) || 100;
-		$pageconfig->{'resultsperpage'} = 100 if( $pageconfig->{'totalentries'} < 100 );
+		$pageconfig->{'resultsperpage'} = int($pageconfig->{'totalentries'}/10) || $linesapage;
+		$pageconfig->{'resultsperpage'} = $linesapage if( $pageconfig->{'totalentries'} < $linesapage );
 		$pageconfig->{'colnameorderby'} = lc( $OrderBy->{'column'} ) || q(id);
 		$pageconfig->{'descendorderby'} = $OrderBy->{'descend'} || 0;
 
@@ -477,13 +479,13 @@ sub help
 	printf( STDERR "\n" );
 	printf( STDERR " * QUERY OPTIONS\n" );
 	printf( STDERR "    -A, --alldata              : Show all data: include a record that is disabled(=1)\n");
-	printf( STDERR "    -a, --addresser <str>      : Sender address(Addresser).\n");
-	printf( STDERR "    -r, --recipient <str>      : Recipient address.\n");
-	printf( STDERR "    -s, --senderdomain <str>   : Sender domain name.\n");
-	printf( STDERR "    -d, --destination <str>    : Destination domain name.\n");
-	printf( STDERR "    -w, --reason <str>         : Reason, see tablectl -Tw --list\n");
-	printf( STDERR "    -g, --hostgroup <str>      : Host group, see tablectl -Tc --list\n");
-	printf( STDERR "    -p, --provider <str>       : Provider name, see tablectl -Tc --list\n");
+	printf( STDERR "    -a, --addresser <str>      : Sender address(Addresser), see tablectl -ta --list\n");
+	printf( STDERR "    -r, --recipient <str>      : Recipient address\n");
+	printf( STDERR "    -s, --senderdomain <str>   : Sender domain name, see tablectl -ts --list\n");
+	printf( STDERR "    -d, --destination <str>    : Destination domain name, see tablectl -td --list\n");
+	printf( STDERR "    -w, --reason <str>         : Reason, see tablectl -tw --list\n");
+	printf( STDERR "    -g, --hostgroup <str>      : Host group, see tablectl -th --list\n");
+	printf( STDERR "    -p, --provider <str>       : Provider name, see tablectl -tp --list\n");
 	printf( STDERR "    -t, --token <str>          : Message token(MD5 hash value)\n");
 	printf( STDERR "    -h, --howrecent <str>      : How recent the mail is past <day> days, e.g.)\n");
 	printf( STDERR "                                 1w = 1 weeks, 2d = 2 days(default), 3h = 3 hours,\n");
@@ -515,6 +517,5 @@ sub help
 	printf( STDERR "\n" );
 	return(1);
 }
-
 
 __END__
