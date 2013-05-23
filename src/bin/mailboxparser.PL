@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: mailboxparser.PL,v 1.40 2010/12/22 15:05:35 ak Exp $
+# $Id: mailboxparser.PL,v 1.40.2.3 2011/03/19 09:41:57 ak Exp $
 # -Id: mailboxparser.PL,v 1.21 2010/02/21 20:09:01 ak Exp -
 # -Id: mailboxparser.PL,v 1.2 2009/09/30 03:20:26 ak Exp -
 # -Id: mailboxparser.PL,v 1.16 2009/08/27 05:09:59 ak Exp -
@@ -88,9 +88,17 @@ try {
 
 	$Cmd->init( $Zci );
 	$Cmd->d( 1, sprintf( "Config file = %s\n", $Cmd->cf() ));
+
+	if( $Zci->config->{'syslog'}->{'enabled'} )
+	{
+		$Cmd->d( 2, sprintf("Syslog facility = %s\n", $Zci->config->{'syslog'}->{'facility'} ));
+		$Zci->historique( 'info', 'starting (version '.$Zci->version.')' );
+	}
 }
 otherwise {
-	$Cmd->exception(shift());
+	my $e = shift();
+	$Cmd->exception($e);
+	$Zci->historique('err','stat='.$e);
 	$Cmd->abort();
 };
 
@@ -175,7 +183,7 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 		my $md5digests = [];	# (Ref->Array) MD5 Digest hash values of each file
 
 		# Create progress bar object if it is verbose mode
-		if( scalar @{$Mail->{'files'}} && $Cmd->debuglevel > -1 )
+		if( scalar @{$Mail->{'files'}} && $Cmd->stream->{out} && $Cmd->debuglevel > -1 )
 		{
 			eval { require Term::ProgressBar; };
 			$parseprogress = new Term::ProgressBar( { 
@@ -268,6 +276,7 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 	if( scalar(@$chunksofemail) == 0 && $Argc > 0 )
 	{
 		$Cmd->e('No data in the mailboxes');
+		$Zci->historique('notice','stat=No data in the mailboxes');
 		$Cmd->abort();
 	}
 
@@ -353,7 +362,7 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 		$howmanyemails += $mailboxparser->nmails();
 
 		# Progress bar for each parser
-		if( $Cmd->debuglevel > -1 )
+		if( $Cmd->stream->{out} && $Cmd->debuglevel > -1 )
 		{
 			eval { require Term::ProgressBar; };
 			$parseprogress = new Term::ProgressBar( { 
@@ -419,12 +428,12 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 
 	} # End of foreach(PARSE_CHUNKS_OF_EMAIL)
 
-	$Cmd->d( 0, sprintf( "Parsed messages/emails(ratio) in the mailbox = %d/%d (%.4f)\n",
+	$Cmd->d( 0, sprintf( "Parsed emails/bounces(ratio) in the mailbox = %d/%d (%.4f)\n",
 			$howmanyparsed, $howmanybounce, $howmanybounce == 0 ? 0 : ($howmanyparsed / $howmanybounce) ));
 
-	if( ref($kanadzuchilog->device()) eq q|IO::File| && $kanadzuchilog->logfile() )
+	if( $kanadzuchilog->logfile() )
 	{
-		$kanadzuchilog->device->close();
+		$kanadzuchilog->device->close() if( ref($kanadzuchilog->device()) eq q|IO::File| );
 		$kanadzuchilog->logfile->unlock() if( $kanadzuchilog->logfile->locked() );
 		$kanadzuchilog->logfile->remove() if( -f $kanadzuchilog->logfile && ! -s _ );
 	}
@@ -447,6 +456,17 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 
 		$Cmd->batchstatus(\$batchinfo);
 	}
+
+	# syslog
+	$Zci->historique( 'info',
+		sprintf( "size=%d, emails=%d, bounces=%d, parsed=%d, output=%s, stat=ok",
+			$sizeofmailbox, $howmanyemails, $howmanybounce, $howmanyparsed,
+			( $Cmd->operation & $Cmd->option->{'two-way'} )
+				? 'file, screen'
+				: ( $Cmd->operation & $Cmd->option->{'log'} )
+					? 'file' 
+					: 'screen' 
+		));
 
 }
 

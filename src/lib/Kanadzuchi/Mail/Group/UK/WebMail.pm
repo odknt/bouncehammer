@@ -1,5 +1,5 @@
-# $Id: WebMail.pm,v 1.1 2010/06/17 12:00:34 ak Exp $
-# Copyright (C) 2010 Cubicroot Co. Ltd.
+# $Id: WebMail.pm,v 1.1.2.2 2011/03/09 07:20:22 ak Exp $
+# Copyright (C) 2010-2011 Cubicroot Co. Ltd.
 # Kanadzuchi::Mail::Group::UK::
                                                    
  ##  ##         ##     ##  ##           ##  ###    
@@ -18,7 +18,7 @@ use warnings;
 # ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
-# Major company's Webmail domains in United Kingdom
+# Major company's Webmail domains in the United Kingdom
 # sub communisexemplar { return qr{[.]uk\z}; }
 sub nominisexemplaria
 {
