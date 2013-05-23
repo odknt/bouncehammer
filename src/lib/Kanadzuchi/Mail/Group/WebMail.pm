@@ -1,4 +1,4 @@
-# $Id: WebMail.pm,v 1.14.2.4 2011/03/09 07:22:19 ak Exp $
+# $Id: WebMail.pm,v 1.14.2.7 2011/04/26 09:06:31 ak Exp $
 # -Id: AOL.pm,v 1.1 2009/08/29 07:33:21 ak Exp -
 # -Id: Google.pm,v 1.1 2009/08/29 07:33:22 ak Exp -
 # -Id: Hotmail.pm,v 1.1 2009/08/29 07:33:22 ak Exp -
@@ -45,7 +45,9 @@ sub nominisexemplaria
 		],
 		'excite' => [
 			# http://excite.com/
-			qr{\Aexcite[.](?:com|co[.]jp)\z},
+			qr{\Aexcite[.](?:at|ch|com|cz|de|dk|es|eu|fr|ie|it)\z},
+			qr{\Aexcite[.](?:jp|li|lt|lv|nl|pl|se)\z},
+			qr{\Aexcite[.]co[.](jp|uk)\z},
 		],
 		'facebook' => [
 			# Facebook has half a billion users.
@@ -81,6 +83,15 @@ sub nominisexemplaria
 			# http://www.myspace.com/
 			qr{\Amyspace[.]com\z},
 		],
+		'opera' => [
+			# My Opera Mail; https://mail.opera.com/
+			qr{\Amyopera[.]com\z},
+		],
+		'orange' => [
+			# Orange; 
+			# LatinMail; http://www.latinmail.com/
+			qr{\A(?:latinmail|starmedia)[.]com\z},
+		],
 		'yahoo' => [
 			# Yahoo! Mail; http://world.yahoo.com/
 			qr{\Ayahoo[.]com\z},
@@ -111,6 +122,8 @@ sub classisnomina
 		'lycos'		=> 'Generic',
 		'microsoft'	=> 'Generic',
 		'myspace'	=> 'Generic',
+		'opera'		=> 'Generic',
+		'orange'	=> 'Generic',
 		'yahoo'		=> 'Yahoo',
 	};
 }

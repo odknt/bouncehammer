@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: messagetoken.PL,v 1.8 2010/10/05 11:00:52 ak Exp $
+# $Id: messagetoken.PL,v 1.8.2.3 2011/05/24 03:28:16 ak Exp $
 # -Id: messagetoken.PL,v 1.3 2010/02/21 20:09:01 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi:Command::
@@ -19,6 +19,7 @@ package Kanadzuchi::Command::MessageToken;
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 use lib '__KANADZUCHIROOT__/lib';
+use lib '__PERLEXTERNALLIB__';
 use strict;
 use warnings;
 use Kanadzuchi;
@@ -75,7 +76,7 @@ otherwise {
 
 
 # Set signal handlers
-foreach my $sig qw( INT QUIT TERM KILL )
+foreach my $sig ( 'INT','QUIT','TERM','KILL','ALRM')
 {
 	$SIG{$sig} = sub { $Cmd->catch_signal($sig); };
 }

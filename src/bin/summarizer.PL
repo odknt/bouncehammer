@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: summarizer.PL,v 1.14.2.2 2011/03/18 05:46:12 ak Exp $
+# $Id: summarizer.PL,v 1.14.2.5 2011/05/24 03:28:16 ak Exp $
 # -Id: summarizer.PL,v 1.13 2010/02/22 05:09:01 ak Exp -
 # -Id: summarizer.PL,v 1.2 2009/10/06 09:10:32 ak Exp -
 # -Id: summarizer.PL,v 1.3 2009/08/27 05:09:59 ak Exp -
@@ -19,6 +19,7 @@ package Kanadzuchi::Command::Summarizer;
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 use lib '__KANADZUCHIROOT__/lib';
+use lib '__PERLEXTERNALLIB__';
 use strict;
 use warnings;
 use Kanadzuchi;
@@ -85,7 +86,7 @@ otherwise {
 };
 
 # Set signal handlers
-foreach my $sig qw( INT QUIT TERM KILL )
+foreach my $sig ( 'INT','QUIT','TERM','KILL','ALRM')
 {
 	$SIG{$sig} = sub { $Cmd->catch_signal($sig); };
 }
@@ -379,7 +380,7 @@ if( $Cmd->operation & ( $Cmd->option->{'aggregate'} + $Cmd->option->{'dailyupdat
 					printf( $outputform->{'stat'}, 
 						map { 
 							$summarized->{ $col }->{'size'}->{ $_ },
-							$summarized->{ $col }->{'freq'}->{ $_ } } qw(min mean max stddev) );
+							$summarized->{ $col }->{'freq'}->{ $_ } } (qw(min mean max stddev)) );
 				}
 			}
 		}
@@ -784,7 +785,7 @@ sub parse_options
 			}
 			else
 			{
-				foreach my $c qw(s d h p w)
+				foreach my $c ( qw(s d h p w) )
 				{
 					push( @$Col, $mastertable->whichtable(lc $c) );
 				}

@@ -1,4 +1,4 @@
-# $Id: 000_compile-core.t,v 1.50.2.6 2011/03/13 08:18:21 ak Exp $
+# $Id: 000_compile-core.t,v 1.50.2.9 2011/04/29 07:00:03 ak Exp $
 use strict;
 use warnings;
 use lib qw(./t/lib ./dist/lib ./src/lib);
@@ -28,8 +28,10 @@ my $Modules = [ qw{
 	Kanadzuchi::Mail::Group
 	Kanadzuchi::Mail::Group::AE::Smartphone
 	Kanadzuchi::Mail::Group::AL::Smartphone
+	Kanadzuchi::Mail::Group::AL::WebMail
 	Kanadzuchi::Mail::Group::AR::Cellphone
 	Kanadzuchi::Mail::Group::AR::Smartphone
+	Kanadzuchi::Mail::Group::AR::WebMail
 	Kanadzuchi::Mail::Group::AT::Cellphone
 	Kanadzuchi::Mail::Group::AT::Smartphone
 	Kanadzuchi::Mail::Group::AU::Cellphone
@@ -67,6 +69,7 @@ my $Modules = [ qw{
 	Kanadzuchi::Mail::Group::EG::WebMail
 	Kanadzuchi::Mail::Group::ES::Cellphone
 	Kanadzuchi::Mail::Group::ES::Smartphone
+	Kanadzuchi::Mail::Group::ES::WebMail
 	Kanadzuchi::Mail::Group::FR::Cellphone
 	Kanadzuchi::Mail::Group::FR::Smartphone
 	Kanadzuchi::Mail::Group::FR::WebMail
@@ -103,6 +106,7 @@ my $Modules = [ qw{
 	Kanadzuchi::Mail::Group::LU::Smartphone
 	Kanadzuchi::Mail::Group::LV::WebMail
 	Kanadzuchi::Mail::Group::MA::Smartphone
+	Kanadzuchi::Mail::Group::MD::WebMail
 	Kanadzuchi::Mail::Group::ME::Smartphone
 	Kanadzuchi::Mail::Group::MK::Smartphone
 	Kanadzuchi::Mail::Group::MO::Smartphone
@@ -132,8 +136,11 @@ my $Modules = [ qw{
 	Kanadzuchi::Mail::Group::PR::Cellphone
 	Kanadzuchi::Mail::Group::PR::Smartphone
 	Kanadzuchi::Mail::Group::PT::Smartphone
+	Kanadzuchi::Mail::Group::PT::WebMail
 	Kanadzuchi::Mail::Group::PY::Smartphone
 	Kanadzuchi::Mail::Group::RO::Smartphone
+	Kanadzuchi::Mail::Group::RO::WebMail
+	Kanadzuchi::Mail::Group::RS::Smartphone
 	Kanadzuchi::Mail::Group::RU::Smartphone
 	Kanadzuchi::Mail::Group::RU::WebMail
 	Kanadzuchi::Mail::Group::SA::Smartphone
@@ -143,9 +150,11 @@ my $Modules = [ qw{
 	Kanadzuchi::Mail::Group::SG::Smartphone
 	Kanadzuchi::Mail::Group::SG::WebMail
 	Kanadzuchi::Mail::Group::SK::Smartphone
+	Kanadzuchi::Mail::Group::SK::WebMail
 	Kanadzuchi::Mail::Group::SR::Smartphone
 	Kanadzuchi::Mail::Group::SV::Smartphone
 	Kanadzuchi::Mail::Group::TH::Smartphone
+	Kanadzuchi::Mail::Group::TH::WebMail
 	Kanadzuchi::Mail::Group::TR::Smartphone
 	Kanadzuchi::Mail::Group::TW::Smartphone
 	Kanadzuchi::Mail::Group::TW::WebMail
@@ -160,6 +169,7 @@ my $Modules = [ qw{
 	Kanadzuchi::Mail::Group::UY::Smartphone
 	Kanadzuchi::Mail::Group::VE::Smartphone
 	Kanadzuchi::Mail::Group::VN::Smartphone
+	Kanadzuchi::Mail::Group::VN::WebMail
 	Kanadzuchi::Mail::Group::ZA::Cellphone
 	Kanadzuchi::Mail::Group::ZA::Smartphone
 	Kanadzuchi::Mail::Group::ZA::WebMail
@@ -173,6 +183,7 @@ my $Modules = [ qw{
 	Kanadzuchi::Mail::Why
 	Kanadzuchi::Mail::Why::ContentError
 	Kanadzuchi::Mail::Why::ExceedLimit
+	Kanadzuchi::Mail::Why::Expired
 	Kanadzuchi::Mail::Why::Filtered
 	Kanadzuchi::Mail::Why::HostUnknown
 	Kanadzuchi::Mail::Why::MailboxFull

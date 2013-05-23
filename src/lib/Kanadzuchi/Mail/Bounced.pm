@@ -1,4 +1,4 @@
-# $Id: Bounced.pm,v 1.30 2010/12/12 06:22:34 ak Exp $
+# $Id: Bounced.pm,v 1.30.2.2 2011/05/13 06:28:38 ak Exp $
 # -Id: Returned.pm,v 1.10 2010/02/17 15:32:18 ak Exp -
 # -Id: Returned.pm,v 1.2 2009/08/29 19:01:18 ak Exp -
 # -Id: Returned.pm,v 1.15 2009/08/21 02:44:15 ak Exp -
@@ -387,11 +387,13 @@ sub is_userunknown
 	{
 		my $uclass = q|Kanadzuchi::Mail::Why::UserUnknown|;
 		my $rclass = q|Kanadzuchi::Mail::Why::RelayingDenied|;
+		my $nclass = q|Kanadzuchi::Mail::Why::NotAccept|;
 		my $dicode = $self->{'diagnosticcode'};
 
 		eval {
 			require Kanadzuchi::Mail::Why::UserUnknown; 
 			require Kanadzuchi::Mail::Why::RelayingDenied; 
+			require Kanadzuchi::Mail::Why::NotAccept; 
 		};
 
 		if( $subj eq Kanadzuchi::RFC3463->causa($stat) )
@@ -400,7 +402,14 @@ sub is_userunknown
 			#   Status: 5.1.1
 			#   Diagnostic-Code: SMTP; 550 5.1.1 <***@example.jp>:
 			#     Recipient address rejected: User unknown in local recipient table
-			$isuu = 1 unless( $rclass->textumhabet($dicode) );
+			if( $rclass->textumhabet($dicode) || $nclass->textumhabet($dicode) )
+			{
+				$isuu = 0;
+			}
+			else
+			{
+				$isuu = 1;
+			}
 		}
 		else
 		{
@@ -685,7 +694,7 @@ sub is_norelaying
 
 	if( defined $self->{'reason'} && length($self->{'reason'}) )
 	{
-		return 0 if( $self->{'reason'} ne 'securityerr' && $self->{'reason'} ne 'undefined' );
+		return 0 if( $self->{'reason'} !~ m{\A(?:securityerr|systemerror|undefined)\z} );
 	}
 
 	my $rclass = q|Kanadzuchi::Mail::Why::RelayingDenied|;
@@ -719,45 +728,49 @@ sub is_somethingelse
 		last() if $else;
 	}
 
-	unless( $else )
+	if( $else eq 'undefined' || $else eq 'userunknown' || ! $else )
 	{
-		$code = substr($stat,0,3);
-		$else = $code eq '5.6' ? 'contenterr' : $code eq '5.7' ? 'securityerr' : q();
+		eval { 
+			use Kanadzuchi::Mail::Why::ContentError;
+			use Kanadzuchi::Mail::Why::SecurityError;
+			use Kanadzuchi::Mail::Why::Expired;
+			use Kanadzuchi::Mail::Why::SystemError;
+			use Kanadzuchi::Mail::Why::NotAccept;
+			use Kanadzuchi::Mail::Why::MailerError;
+		};
+
+		my $dicode = $self->{'diagnosticcode'};
+		my $eclass = q();
+		my $wclass = { 
+			'securityerr' => 'SecurityError', 
+			'systemerror' => 'SystemError', 
+			'expired' => 'Expired', 
+			'contenterr' => 'ContentError', 
+			'notaccept' => 'NotAccept',
+			'mailererror' => 'MailerError', };
+
+		foreach my $w ( keys %$wclass )
+		{
+			$eclass = q|Kanadzuchi::Mail::Why::|.$wclass->{ $w };
+			if( $eclass->textumhabet( $dicode ) )
+			{
+				$else = $w;
+				last();
+			}
+		}
 
 		unless( $else )
 		{
-			eval { 
-				use Kanadzuchi::Mail::Why::SecurityError;
-				use Kanadzuchi::Mail::Why::SystemError;
-				use Kanadzuchi::Mail::Why::NotAccept;
-				use Kanadzuchi::Mail::Why::MailerError;
-			};
+			# The error 'Relaying denied' is classfied into the rason 'systemerror'
+			eval { use Kanadzuchi::Mail::Why::RelayingDenied; };
+			$eclass = q|Kanadzuchi::Mail::Why::RelayingDenied|;
+			$else = 'systemerror' if( $eclass->textumhabet( $dicode ) );
+		}
 
-			my $dicode = $self->{'diagnosticcode'};
-			my $eclass = q();
-			my $wclass = { 
-				'securityerr' => 'SecurityError', 
-				'systemerror' => 'SystemError', 
-				'notaccept' => 'NotAccept',
-				'mailererror' => 'MailerError', };
-
-			foreach my $w ( keys %$wclass )
-			{
-				$eclass = q|Kanadzuchi::Mail::Why::|.$wclass->{ $w };
-				if( $eclass->textumhabet( $dicode ) )
-				{
-					$else = $w;
-					last();
-				}
-			}
-
-			unless( $else )
-			{
-				# The error 'Relaying denied' is classfied into the rason 'systemerror'
-				eval { use Kanadzuchi::Mail::Why::RelayingDenied; };
-				$eclass = q|Kanadzuchi::Mail::Why::RelayingDenied|;
-				$else = 'systemerror' if( $eclass->textumhabet( $dicode ) );
-			}
+		unless( $else )
+		{
+			$code = substr($stat,0,3);
+			$else = $code eq '5.6' ? 'contenterr' : $code eq '5.7' ? 'securityerr' : q();
 		}
 	}
 

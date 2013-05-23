@@ -1,4 +1,4 @@
-# $Id: WebMail.pm,v 1.2 2010/06/16 08:15:30 ak Exp $
+# $Id: WebMail.pm,v 1.2.2.2 2011/04/07 06:53:15 ak Exp $
 # Copyright (C) 2010 Cubicroot Co. Ltd.
 # Kanadzuchi::Mail::Group::IN::
                                                    
@@ -23,10 +23,17 @@ sub nominisexemplaria
 {
 	my $class = shift();
 	return {
-		# Experimental(Not tested)
-		# http://www.ibibo.com/
 		'ibibo' => [
+			# http://www.ibibo.com/
 			qr{\Aibibo[.]com\z},
+		],
+		'in.com' => [
+			# in.com; http://mail.in.com/
+			qr{\Ain[.]com\z}
+		],
+		'rediff.com' => [
+			# rediff.com; http://www.rediff.com/
+			qr{\Arediffmail[.]com\z},
 		],
 	};
 }
@@ -36,6 +43,8 @@ sub classisnomina
 	my $class = shift();
 	return {
 		'ibibo'		=> 'Generic',
+		'in.com'	=> 'Generic',
+		'rediff.com'	=> 'Generic',
 	};
 }
 

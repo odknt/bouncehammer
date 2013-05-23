@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: mailboxparser.PL,v 1.40.2.3 2011/03/19 09:41:57 ak Exp $
+# $Id: mailboxparser.PL,v 1.40.2.8 2011/05/24 03:28:16 ak Exp $
 # -Id: mailboxparser.PL,v 1.21 2010/02/21 20:09:01 ak Exp -
 # -Id: mailboxparser.PL,v 1.2 2009/09/30 03:20:26 ak Exp -
 # -Id: mailboxparser.PL,v 1.16 2009/08/27 05:09:59 ak Exp -
@@ -21,6 +21,7 @@ package Kanadzuchi::Command::MailboxParser;
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 use lib '__KANADZUCHIROOT__/lib';
+use lib '__PERLEXTERNALLIB__';
 use strict;
 use warnings;
 use Kanadzuchi;
@@ -92,7 +93,7 @@ try {
 	if( $Zci->config->{'syslog'}->{'enabled'} )
 	{
 		$Cmd->d( 2, sprintf("Syslog facility = %s\n", $Zci->config->{'syslog'}->{'facility'} ));
-		$Zci->historique( 'info', 'starting (version '.$Zci->version.')' );
+		$Zci->historique( 'info', 'stat=starting (version '.$Zci->version.')' );
 	}
 }
 otherwise {
@@ -103,7 +104,7 @@ otherwise {
 };
 
 # Set signal handlers
-foreach my $sig qw( INT QUIT TERM KILL ALRM )
+foreach my $sig ( 'INT','QUIT','TERM','KILL','ALRM')
 {
 	$SIG{$sig} = sub { $Cmd->catch_signal($sig); };
 }
@@ -459,8 +460,9 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 
 	# syslog
 	$Zci->historique( 'info',
-		sprintf( "size=%d, emails=%d, bounces=%d, parsed=%d, output=%s, stat=ok",
+		sprintf( "size=%d, emails=%d, bounces=%d, parsed=%d, ratio=%.4f, output=%s, stat=ok",
 			$sizeofmailbox, $howmanyemails, $howmanybounce, $howmanyparsed,
+			( $howmanyparsed / $howmanybounce ),
 			( $Cmd->operation & $Cmd->option->{'two-way'} )
 				? 'file, screen'
 				: ( $Cmd->operation & $Cmd->option->{'log'} )

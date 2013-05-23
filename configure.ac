@@ -1,11 +1,11 @@
 dnl #                                               -*- Autoconf -*-
 dnl # Process this file with autoconf to produce a configure script.
-dnl # $Id: configure.ac,v 1.68.2.5 2011/03/13 06:58:04 ak Exp $
+dnl # $Id: configure.ac,v 1.68.2.10 2011/05/18 07:30:27 ak Exp $
 dnl # -Id: configure.ac,v 1.8 2009/12/01 10:35:23 ak Exp -
 dnl # -Id: configure.ac,v 1.35 2009/08/27 05:09:04 ak Exp -
 dnl # Copyright (C) 2009-2011 Cubicroot Co. Ltd.
 AC_PREREQ(2.61)
-AC_INIT([BounceHammer], [2.7.0], [bugs@bouncehammer.jp])
+AC_INIT([BounceHammer], [2.7.1], [bugs@bouncehammer.jp])
 AM_INIT_AUTOMAKE([foreign])
 AC_PREFIX_DEFAULT(/usr/local/bouncehammer)
 AC_CANONICAL_HOST
@@ -89,6 +89,18 @@ else
 	fi
 fi
 
+AC_ARG_WITH([perl-extlib],
+	AC_HELP_STRING(
+		[--with-perl-extlib=DIR],
+		[DIR to perl external library directory which hold modules installed by cpanm -l]),
+	[WITH_PERLEXTLIB=$withval],[WITH_PERLEXTLIB=none])
+if test "x$WITH_PERLEXTLIB" = "xnone"; then
+	PERL_EXTLIB='PERL_EXTLIB'
+else
+	PERL_EXTLIB=$WITH_PERLEXTLIB
+fi
+AC_SUBST(PERL_EXTLIB)
+
 dnl # Checks for libraries.
 MISSING_PERL_MODULES=''
 MISSING_MODULE_COUNT=0
@@ -126,6 +138,14 @@ else
 	AC_MSG_RESULT(yes)
 	PI_IMPLEMENT_TB=YES
 fi
+
+dnl # Inspired from configure script in MRTG source package
+echo -n 'ordering CD from https://cubicroot.jp/order/bouncehammer-cdrom .'
+sleep 1
+echo -n '.'
+sleep 1
+echo -n '. '
+echo 'just kidding ;-)'
 
 dnl # Checks for header files.
 
@@ -191,6 +211,7 @@ AC_CONFIG_FILES([Makefile
                  src/lib/Kanadzuchi/Mail/Group/LU/Makefile
                  src/lib/Kanadzuchi/Mail/Group/LV/Makefile
                  src/lib/Kanadzuchi/Mail/Group/MA/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/MD/Makefile
                  src/lib/Kanadzuchi/Mail/Group/ME/Makefile
                  src/lib/Kanadzuchi/Mail/Group/MK/Makefile
                  src/lib/Kanadzuchi/Mail/Group/MO/Makefile
@@ -213,6 +234,7 @@ AC_CONFIG_FILES([Makefile
                  src/lib/Kanadzuchi/Mail/Group/PT/Makefile
                  src/lib/Kanadzuchi/Mail/Group/PY/Makefile
                  src/lib/Kanadzuchi/Mail/Group/RO/Makefile
+                 src/lib/Kanadzuchi/Mail/Group/RS/Makefile
                  src/lib/Kanadzuchi/Mail/Group/RU/Makefile
                  src/lib/Kanadzuchi/Mail/Group/SA/Makefile
                  src/lib/Kanadzuchi/Mail/Group/SE/Makefile

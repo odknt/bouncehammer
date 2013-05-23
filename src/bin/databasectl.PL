@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: databasectl.PL,v 1.23.2.4 2011/03/19 09:41:56 ak Exp $
+# $Id: databasectl.PL,v 1.23.2.7 2011/05/24 02:43:16 ak Exp $
 # -Id: databasectl.PL,v 1.16 2010/02/21 20:09:01 ak Exp -
 # -Id: databasectl.PL,v 1.1 2009/08/29 14:36:53 ak Exp -
 # -Id: databasectl.PL,v 1.15 2009/08/27 05:09:59 ak Exp -
@@ -20,6 +20,7 @@ package Kanadzuchi::Command::Databasectl;
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 use lib '__KANADZUCHIROOT__/lib';
+use lib '__PERLEXTERNALLIB__';
 use strict;
 use warnings;
 use Kanadzuchi;
@@ -87,7 +88,7 @@ try {
 	if( $Zci->config->{'syslog'}->{'enabled'} )
 	{
 		$Cmd->d( 2, sprintf("Syslog facility = %s\n", $Zci->config->{'syslog'}->{'facility'} ));
-		$Zci->historique( 'info', 'starting (version '.$Zci->version.')' );
+		$Zci->historique( 'info', 'stat=starting (version '.$Zci->version.')' );
 	}
 }
 otherwise {
@@ -99,7 +100,7 @@ otherwise {
 
 
 # Set signal handlers
-foreach my $sig qw( INT QUIT TERM KILL )
+foreach my $sig ( 'INT','QUIT','TERM','KILL','ALRM' )
 {
 	$SIG{$sig} = sub { $Cmd->catch_signal($sig); };
 }
