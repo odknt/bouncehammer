@@ -1,4 +1,4 @@
-# $Id: Bounced.pm,v 1.25 2010/07/23 06:49:10 ak Exp $
+# $Id: Bounced.pm,v 1.26 2010/08/16 12:03:35 ak Exp $
 # -Id: Returned.pm,v 1.10 2010/02/17 15:32:18 ak Exp -
 # -Id: Returned.pm,v 1.2 2009/08/29 19:01:18 ak Exp -
 # -Id: Returned.pm,v 1.15 2009/08/21 02:44:15 ak Exp -
@@ -90,11 +90,12 @@ sub eatit
 		unless( $bouncemesg->{'recipient'} )
 		{
 			# Directly access to the values, more faster
-			@$tempemails = grep( m{[@]},
+			#  Final-Recipient: RFC822; @example.jp ... local-part?
+			@$tempemails = grep( m{\A.+[@].+\z},
 						$mimeparser->getit('X-Actual-Recipient'),
 						$mimeparser->getit('Final-Recipient'),
 						$mimeparser->getit('Original-Recipient') );
-			@$tempemails = grep( m{[@]}, 
+			@$tempemails = grep( m{\A.+[@].+\z}, 
 					$mimeparser->getit('To'),
 					$mimeparser->getit('Delivered-To'),
 					$mimeparser->getit('Forward-Path') ) unless( @$tempemails );
@@ -102,7 +103,7 @@ sub eatit
 			if( $mailx->greed() && ! @$tempemails )
 			{
 				# Greedily find a recipient address
-				@$tempemails = grep( m{[@]}, $mimeparser->getit('Envelope-To')
+				@$tempemails = grep( m{\A.+[@].+\z}, $mimeparser->getit('Envelope-To')
 							 || $mimeparser->getit('X-Envelope-To')
 							 || $mimeparser->getit('Resent-To')
 							 || $mimeparser->getit('Apparently-To') );
@@ -140,14 +141,14 @@ sub eatit
 			my( $_a, $_e, $_m );
 
 			# Directly access to the values, more faster
-			@$tempemails = grep( m{[@]}, 
+			@$tempemails = grep( m{\A.+[@].+\z}, 
 						$mimeparser->getit('From'),
 						$mimeparser->getit('Return-Path'),
 						$mimeparser->getit('Reply-To') );
 			unless( @$tempemails )
 			{
 				# There is neither From: nor Reply-To: header.
-				@$tempemails = grep( m{[@]}, 
+				@$tempemails = grep( m{\A.+[@].+\z}, 
 							$mimeparser->getit('Errors-To'),
 							$mimeparser->getit('Reverse-Path'),
 							$mimeparser->getit('X-Postfix-Sender'),
@@ -155,7 +156,7 @@ sub eatit
 							$mimeparser->getit('X-Envelope-From') );
 
 				# Greedily find an addresser.
-				@$tempemails = grep( m{[@]}, $mimeparser->getit('Resent-From')
+				@$tempemails = grep( m{\A.+[@].+\z}, $mimeparser->getit('Resent-From')
 							 || $mimeparser->getit('Sender')
 							 || $mimeparser->getit('Resent-Reply-To')
 							 || $mimeparser->getit('Apparently-From')

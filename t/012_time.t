@@ -1,4 +1,4 @@
-# $Id: 012_time.t,v 1.3 2010/07/07 09:05:00 ak Exp $
+# $Id: 012_time.t,v 1.5 2010/08/29 21:03:42 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -9,7 +9,8 @@ use strict;
 use warnings;
 use Kanadzuchi::Test;
 use Kanadzuchi::Time;
-use Test::More ( tests => 191 );
+use Time::Piece;
+use Test::More ( tests => 207 );
 
 #  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 # ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -20,7 +21,7 @@ my $T = new Kanadzuchi::Test(
 	'class' => q|Kanadzuchi::Time|,
 	'methods' => [
 		'to_second', 'tz2second', 'second2tz',
-		'monthname', 'dayofweek', 'hourname', ],
+		'monthname', 'dayofweek', 'hourname', 'o2d', ],
 	'instance' => undef(), );
 
 #  ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
@@ -128,6 +129,30 @@ METHODS: {
 		is( $hours->[6], q{Morning}, $class.q{->hourname(0)->[6]} );
 		is( $hours->[12], q{Noon}, $class.q{->hourname(0)->[12]} );
 		is( $hours->[18], q{Evening}, $class.q{->hourname(0)->[18]} );
+	}
+
+	OFFSET2DATE: {
+		my $date = q();
+		my $base = new Time::Piece;
+		my $time = undef();
+
+		foreach my $o ( -2, -1, 0, 1, 2 )
+		{
+			$date = $class->o2d($o);
+			$base = Time::Piece->strptime($base->ymd(), "%Y-%m-%d");
+			$time = Time::Piece->strptime($date, "%Y-%m-%d");
+			like( $date, qr{\A\d{4}[-]\d{2}[-]\d{2}\z}, 'offset = '.$o.', date = '.$date );
+			is( $time->epoch, $base->epoch - ( $o * 86400 ) );
+		}
+
+		foreach my $o ( 'a', ' ', 'string' )
+		{
+			$date = $class->o2d($o);
+			$base = Time::Piece->strptime($base->ymd(), "%Y-%m-%d");
+			$time = Time::Piece->strptime($date, "%Y-%m-%d");
+			like( $date, qr{\A\d{4}[-]\d{2}[-]\d{2}\z}, 'offset = '.$o.', date = '.$date );
+			is( $time->epoch, $base->epoch )
+		}
 	}
 }
 
