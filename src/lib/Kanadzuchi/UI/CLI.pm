@@ -1,4 +1,4 @@
-# $Id: CLI.pm,v 1.11 2010/04/09 03:54:01 ak Exp $
+# $Id: CLI.pm,v 1.16 2010/05/25 04:48:53 ak Exp $
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi::UI::
                       
@@ -39,6 +39,7 @@ __PACKAGE__->mk_ro_accessors(
 	'calledfrom',	# (String) Script name
 	'commandline',	# (String) Command line
 	'processid',	# (Integer) Process ID
+	'startedat',	# (Time::Piece) Start time
 );
 
 # Rewritable accessors
@@ -69,11 +70,13 @@ sub new
 	my $argvs = { @_ }; 
 
 	DEFAULT_VALUES: {
+		$argvs->{'startedat'} = new Time::Piece();
 		$argvs->{'processid'} = $$ unless( defined($argvs->{'processid'}) );
 		$argvs->{'operation'} = 0 unless( defined($argvs->{'operation'}) );
 		$argvs->{'debuglevel'} = 0 unless( defined($argvs->{'debuglevel'}) );
 		$argvs->{'calledfrom'} = File::Basename::basename([caller()]->[1]);
 		$argvs->{'option'} = {} unless( defined($argvs->{'option'}) );
+		$argvs->{'silent'} = 0 unless( defined($argvs->{'silent'}) );
 
 		last() unless( defined($argvs->{'cf'}) );
 		last() if( ref($argvs->{'cf'}) eq q|Path::Class::File| );
@@ -199,7 +202,7 @@ sub init
 	};
 
 	$self->d(1,sprintf( "%s/%s %s\n", $dzci->myname(), $self->{'calledfrom'}, $dzci->version() ));
-	$self->d(1,sprintf( "Command started at %s\n", Time::Piece->new->hms(':') ));
+	$self->d(1,sprintf( "Command started at %s\n", $self->{'startedat'}->cdate() ));
 	$self->d(1,sprintf( "Process ID = %d\n", $self->{'processid'} ));
 	$self->d(2,sprintf( "Pid file = %s\n", $self->{'pf'} ));
 	$self->d(2,sprintf( "Operation = %d [%024b]\n", $self->{'operation'}, $self->{'operation'} ));
@@ -209,6 +212,36 @@ sub init
 	return(1);
 }
 
+sub batchstatus
+{
+	# +-+-+-+-+-+-+-+-+-+-+-+
+	# |b|a|t|c|h|s|t|a|t|u|s|
+	# +-+-+-+-+-+-+-+-+-+-+-+
+	#
+	# @Description	Print batch job status to STDOUT
+	# @Param <ref>	(Ref->Scalar) Additional status information
+	# @Return	1
+	my $self = shift();
+	my $stat = shift();
+	my $time = Time::Piece->new();
+	my $load = qx(uptime); chomp($load);
+
+	# Block style YAML(is not JSON) format
+	printf( STDOUT qq|--- # %s %s command status\n|, $self->{'startedat'}->ymd('-'), $self->{'calledfrom'} );
+	printf( STDOUT qq|command: "%s"\n|, $self->{'calledfrom'} );
+	printf( STDOUT qq|arguments: "%s"\n|, $self->{'commandline'} );
+	printf( STDOUT qq|user: "%s"\n|, $ENV{'USER'} || $ENV{'LOGNAME'} || q() );
+	printf( STDOUT qq|load: "%s"\n|, $load );
+	printf( STDOUT qq|time:\n| );
+	printf( STDOUT qq|  started: "%s"\n|, $self->{'startedat'}->cdate() );
+	printf( STDOUT qq|  ended:   "%s"\n|, $time->cdate() );
+	printf( STDOUT qq|  elapsed: %d\n|, $time->epoch() - $self->{'startedat'}->epoch() );
+
+	return(1) unless( length($$stat) );
+	printf( STDOUT qq|status:\n| );
+	printf( STDOUT $$stat );
+	return(1)
+}
 
 sub d
 {
@@ -219,14 +252,17 @@ sub d
 	# @Description	Print debug message to Standard-Error device
 	# @Param <Lv>	(Integer) debug level
 	# @Param <Msg>	(String) debug message
-	# @Return	(Integer) 1 = Successfully printed
-	#		(Integer) 0 = Missing argument
+	# @Return	(String) Empty or debug message
 	my $self = shift();
-	my $dlev = shift();
-	my $mesg = shift() || return(0);
-	return(1) if( $self->{'silent'} );
-	printf( STDERR qq{ *debug%d: %s}, $dlev, $mesg ) if( $self->{'debuglevel'} >= $dlev );
-	return(1);
+	my $dlev = shift() || 0;
+	my $argv = shift() || return(q{});
+	my $mesg = q();
+
+	return(q{}) if( $self->{'silent'} || $self->{'debuglevel'} < $dlev );
+
+	$mesg = sprintf( qq{ *debug%d: %s}, $dlev, $argv );
+	defined(wantarray()) ? return($mesg) : printf( STDERR $mesg );
+	return(q{});
 }
 
 sub e
@@ -240,7 +276,7 @@ sub e
 	# @Return	<None>
 	# @See		abort(), DESTROY()
 	my $self = shift();
-	my $mesg = shift() || return(0);
+	my $mesg = shift() || return(q{});
 	Carp::carp( qq{ ***error: $mesg} ) unless( $self->{'silent'} );
 	$self->abort();
 }

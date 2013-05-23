@@ -1,9 +1,12 @@
-[%- SET currentpagenum = pagersinthequery.currentpagenum -%]
-[%- SET resultsperpage = pagersinthequery.resultsperpage -%]
-[%- SET lastpagenumber = pagersinthequery.lastpagenumber -%]
-[%- SET colnameorderby = pagersinthequery.colnameorderby -%]
-[%- SET descendorderby = pagersinthequery.descendorderby -%]
+[%- SET currentpagenum = pagination.currentpagenum -%]
+[%- SET resultsperpage = pagination.resultsperpage -%]
+[%- SET lastpagenumber = pagination.lastpagenumber -%]
+[%- SET colnameorderby = pagination.colnameorderby -%]
+[%- SET descendorderby = pagination.descendorderby -%]
 [%- SET pagesintheline = 10 -%]
+[%- SET firstentry = pagination.offsetposition + 1 -%]
+[%- SET lastentry = pagination.currentpagenum * pagination.resultsperpage -%]
+
 [%- IF contentsname == 'search' -%]
 	[%- SET baseuri = "${scriptname}/search/condition/${encryptedforuri}/${colnameorderby},${descendorderby}" -%]
 [%- ELSIF contentsname == 'table' -%]
@@ -35,14 +38,12 @@
 	[%- END -%]
 [%- END -%]
 [%- SET availablepages = [ pp_start .. pp_endby ] -%]
-
-<div class = 'lhs'>&nbsp;</div>
-<div class = 'rhs'>
-	[%- IF pagersinthequery.totalentries > 0 -%]
+<div class = 'summary'>
+	[%- IF pagination.count > 0 -%]
 		Results
-		[%- IF pagersinthequery.totalentries > 1 -%]
-			<strong>[% pagersinthequery.firstentry %] - [% pagersinthequery.lastentry %]</strong>
-			of <strong>[% pagersinthequery.totalentries %]</strong> records
+		[%- IF pagination.count > 1 -%]
+			<strong>[% firstentry %] - [% lastentry %]</strong>
+			of <strong>[% pagination.count %]</strong> records
 		[%- ELSE -%]
 			<strong>1</strong> of <strong>1</strong> reocrd
 		[%- END -%]
@@ -50,17 +51,30 @@
 		<strong>No records in the DB</strong>
 	[%- END -%]
 </div>
+<div class = 'lhs'>
+	[%- IF lastpagenumber > 1 -%]
+		[%- IF currentpagenum > 1 -%]
+			&nbsp;<a href = '[% baseuri %]/[% currentpagenum - 1 %]/[% resultsperpage %]'><strong>Prev.</strong></a>&nbsp;
+		[%- END -%]
+	[%- END -%]
+</div>
+<div class = 'rhs'>
+	[%- IF lastpagenumber > 1 -%]
+		[%- IF currentpagenum < lastpagenumber -%]
+			&nbsp;<a href = '[% baseuri %]/[% currentpagenum + 1 %]/[% resultsperpage %]'><strong>Next</strong></a>&nbsp;
+		[%- END -%]
+	[%- END -%]
+</div>
 <div class = 'mid'>
 	[%- IF lastpagenumber > 1 -%]
 		[%- IF currentpagenum > 1 -%]
-			<a href = '[% baseuri %]/[% currentpagenum - 1 %]/[% resultsperpage %]'><strong>Previous</strong></a>&nbsp;
 			[%- IF currentpagenum > ( ( pagesintheline / 2 ) + 1 ) -%]
 				<a href = '[% baseuri %]/1/[% resultsperpage %]'>1</a>&nbsp;..&nbsp;
 			[%- END -%]
 		[%- END -%]
 						
 		[%- FOREACH PP IN availablepages -%]
-			[%- IF PP == pagersinthequery.currentpagenum -%]
+			[%- IF PP == pagination.currentpagenum -%]
 				<span class = 'thispage'>&nbsp;<strong>[% PP %]</strong>&nbsp;</span>&nbsp;
 			[%- ELSE -%]
 				<a href = '[% baseuri %]/[% PP %]/[% resultsperpage %]'>[% PP %]</a>&nbsp;
@@ -71,9 +85,6 @@
 			[%- IF ( pp_endby + 1 ) < lastpagenumber -%]
 				.. <a href = '[% baseuri %]/[% lastpagenumber %]/[% resultsperpage %]'>[% lastpagenumber %]</a>&nbsp;
 			[%- END -%]
-			<a href = '[% baseuri %]/[% currentpagenum + 1 %]/[% resultsperpage %]'><strong>Next</strong></a>
 		[%- END -%]
-	[%- ELSE -%]
-		&nbsp;
 	[%- END -%]
 </div>

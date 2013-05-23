@@ -1,16 +1,17 @@
-# $Id: RDB.pm,v 1.9 2010/03/04 08:31:40 ak Exp $
+# $Id: BdDR.pm,v 1.2 2010/05/16 23:58:16 ak Exp $
+# -Id: RDB.pm,v 1.9 2010/03/04 08:31:40 ak Exp -
 # -Id: Database.pm,v 1.2 2009/08/29 19:01:14 ak Exp -
 # -Id: Database.pm,v 1.7 2009/08/13 07:13:28 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
 # Kanadzuchi::
-                       
- #####  ####   #####   
- ##  ## ## ##  ##  ##  
- ##  ## ##  ## #####   
- #####  ##  ## ##  ##  
- ## ##  ## ##  ##  ##  
- ##  ## ####   #####   
-package Kanadzuchi::RDB;
+                              
+ #####      ## ####   #####   
+ ##  ##     ## ## ##  ##  ##  
+ #####   ##### ##  ## ##  ##  
+ ##  ## ##  ## ##  ## #####   
+ ##  ## ##  ## ## ##  ## ##   
+ #####   ##### ####   ##  ##  
+package Kanadzuchi::BdDR;
 
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
@@ -18,6 +19,7 @@ package Kanadzuchi::RDB;
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 use base 'Class::Accessor::Fast::XS';
+use DBI;
 use strict;
 use warnings;
 
@@ -27,9 +29,6 @@ use warnings;
 # |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 __PACKAGE__->mk_accessors(
-	'records',	# (Ref->Array->K::Mail::*)
-	'count',	# (Integer) The number of bounced messages
-	'handle',	# (K::R::Schema) Database Handle
 	'dbname',	# (String) Database Name
 	'dbtype',	# (String) Database Type
 	'hostname',	# (String) Database Host
@@ -37,15 +36,12 @@ __PACKAGE__->mk_accessors(
 	'username',	# (String) Database User
 	'password',	# (String) Database Password
 	'datasn',	# (String) Data Source Name
-	'table',	# (String) Table name(H::Schema::*)
-	'cache',	# (Hashref) Record cache
+	'handle',	# (DBI::db) Database Handle
+	'error',	# (Ref->Hash) Error Information
+	'autocommit',	# (Integer) AutoCommit for DBI
+	'raiseerror',	# (Integer) RaiseError for DBI
+	'printerror',	# (Integer) PrintError for DBI
 );
-
-#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
-# ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
-# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__||
-# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
-#
 
 #  ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
 # ||C |||l |||a |||s |||s |||       |||M |||e |||t |||h |||o |||d |||s ||
@@ -60,15 +56,14 @@ sub new
 	#
 	# @Description	Wrapper method of new()
 	# @Param	<None>
-	# @Return	TheHammer::Log Object
+	# @Return	Kanadzuchi::Database Object
 	my $class = shift();
 	my $argvs = { @_ };
 
-	DEFAULT_VALUES: {
-		$argvs->{'count'} = 0 unless( defined($argvs->{'count'}) );
-		$argvs->{'records'} = [] unless( defined($argvs->{'records'}) );
-		$argvs->{'cache'} = {} unless( defined($argvs->{'cache'}) );
-	}
+	$argvs->{'error'} = { 'string' => q(), 'count' => 0 };
+	$argvs->{'autocommit'} = 1;
+	$argvs->{'raiseerror'} = 1;
+	$argvs->{'printerror'} = 0;
 	return($class->SUPER::new($argvs));
 }
 
@@ -85,29 +80,24 @@ sub setup
 	#
 	# @Description	Setting up connection information
 	# @Param <ref>	(ref->Kanadzuchi) config->{database}
-	# @Return	(Integer) 0 = Failed to setup
-	#		(Integer) 1 = Successfully 
+	# @Return	(Kanadzuchi::BdDR) This object
 	my $self = shift();
-	my $conf = shift() || return(0);
+	my $conf = shift() || return($self);
 
-	return(0) unless( ref($conf) eq q|HASH| );
-
-	# Set values to Kanadzuchi::RDB object
-	SET_VALUES: {
-		foreach my $v ( 'hostname', 'port', 'dbtype' )
+	if( ref($conf) eq q|HASH| )
+	{
+		# Set values to Kanadzuchi::BdDR object
+		foreach my $_v ( 'hostname', 'port', 'dbtype' )
 		{
-			$self->{$v} = $conf->{$v} unless( defined($self->{$v}) );
+			$self->{$_v} = $conf->{$_v} unless( defined($self->{$_v}) );
 		}
 
-		$self->{'dbname'} = $conf->{'dbname'};
-		$self->{'username'} = $conf->{'username'};
-		$self->{'password'} = $conf->{'password'};
-	}
+		$self->{'dbname'}   = $conf->{'dbname'} || q(:memory:);
+		$self->{'dbtype'} ||= q(SQLite);
+		$self->{'username'} = $conf->{'username'} || undef();
+		$self->{'password'} = $conf->{'password'} || undef();
 
-	return(0) unless($self->{'dbname'});
-	return(0) unless($self->{'dbtype'});
-
-	MAKE_DSN: {
+		# Make the data source name
 		my $ty = lc( $self->{'dbtype'} );
 		my $ch = length($ty) == 1 ? substr( $ty, 0, 1 ) : q(x);
 		my( $dr, $db, $ds, $pt );
@@ -129,16 +119,12 @@ sub setup
 			$dr = 'SQLite';
 			$db = 'SQLite';
 		}
-		elsif( $ty eq 'sybase' || $ch eq 'y' )
-		{
-			$dr = 'Sybase';
-			$db = 'Sybase';
-			$pt = $self->{'port'} || 4100;
-		}
 		else
 		{
 			# Unsupported database type
-			return(0);
+			$self->{'dbname'} = q();
+			$self->{'datasn'} = q();
+			return($self);
 		}
 
 		if( defined($self->{'hostname'}) && defined($pt) )
@@ -149,7 +135,7 @@ sub setup
 		}
 		else
 		{
-			# Use local socket
+			# Use UNIX Domain socket
 			$ds = sprintf( "dbi:%s:dbname=%s", $dr, $self->{'dbname'} );
 		}
 
@@ -157,36 +143,74 @@ sub setup
 		$self->{'datasn'} = $ds;
 	}
 
-	return(1);
+	return($self);
 }
 
-sub makecache
+sub connect
 {
-	# +-+-+-+-+-+-+-+-+-+
-	# |m|a|k|e|c|a|c|h|e|
-	# +-+-+-+-+-+-+-+-+-+
+	# +-+-+-+-+-+-+-+
+	# |c|o|n|n|e|c|t|
+	# +-+-+-+-+-+-+-+
 	#
-	# @Description	Send query and save it to the cache
-	# @Param <tab>	(String) Table name
-	# @Param <col>	(String) Column name
-	# @Return	(Integer) 0 = No such record
-	#		(Integer) n = The number of records
+	# @Description	Connect to the database
+	# @Param 	<None>
+	# @Return	(DBI::db) Database handle
+	#		(undef) Failed to connect
 	my $self = shift();
-	my $ttab = shift() || return(0);
-	my $tcol = shift() || return(0);
+	my $dsnx = $self->{'datasn'} || return(undef());
+	my $dopt = {};
 
-	# Return keys if the record exists in the cache
-	return(keys(%{$self->{'cache'}->{$ttab}})) if(exists($self->{'cache'}->{$ttab}));
+	eval { 
+		$dopt = {
+			'AutoCommit' => $self->{'autocommit'},
+			'RaiseError' => $self->{'raiseerror'},
+			'PrintError' => $self->{'printerror'},
+		};
 
-	my $_rs = $self->{'handle'}->resultset($ttab)->search( { 'disabled' => 0 } );
-	my $_nr = 0;
+		$self->{'handle'} = DBI->connect( $dsnx, $self->{'username'}, $self->{'password'}, $dopt );
+	};
+	return( $self->{'handle'} ) unless($@);
 
-	while( my $_cr = $_rs->next() )
-	{
-		$self->{'cache'}->{$ttab}->{$_cr->$tcol} = $_cr->id;
-		$_nr++;
-	}
-	return($_nr);
+	$self->{'error'}->{'string'} = $@;
+	$self->{'error'}->{'count'}++;
+	return(undef());
+}
+
+sub disconnect
+{
+	# +-+-+-+-+-+-+-+-+-+-+
+	# |d|i|s|c|o|n|n|e|c|t|
+	# +-+-+-+-+-+-+-+-+-+-+
+	#
+	# @Description	Disconnect
+	# @Param 	<None>
+	# @Return	(Integer) 1 = Successfully disconnected
+	#		(Integer) 0 = Failed to disconnect
+	my $self = shift();
+	my $dbhx = $self->{'handle'} || return(0);
+
+	eval { 
+		$dbhx->disconnect();
+		$self->{'handle'} = undef();
+	};
+
+	return(1) unless($@);
+	$self->{'error'}->{'string'} = $@;
+	$self->{'error'}->{'count'}++;
+	return(0);
+}
+
+sub DESTROY
+{
+	# +-+-+-+-+-+-+-+
+	# |D|E|S|T|R|O|Y|
+	# +-+-+-+-+-+-+-+
+	#
+	# @Description	Destoractor
+	# @Param 	<None>
+	# @Return	(Integer) 1
+	my $self = shift();
+	return($self->disconnect());
 }
 
 1;

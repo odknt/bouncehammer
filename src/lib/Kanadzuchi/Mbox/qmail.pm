@@ -1,4 +1,4 @@
-# $Id: qmail.pm,v 1.2 2010/04/02 11:43:36 ak Exp $
+# $Id: qmail.pm,v 1.5 2010/05/25 07:40:19 ak Exp $
 # Kanadzuchi::Mbox::
                          ##  ###    
   #####  ##  ##  ####         ##    
@@ -46,11 +46,11 @@ my $RxSMTPError = {
 	'payload' => qr{\A.+[ ]failed[ ]after[ ]I[ ]sent[ ]the[ ]message[.]\z}o,
 };
 
-# my $RxConnError = {
-# 	'nohost' => qr{\ASorry[,][ ]I[ ]couldn[']t[ ]find[ ]any[ ]host[ ]named[ ]}o,
-# 	'nomxrr' => qr{\ASorry[,][ ]I[ ]couldn[']t[ ]find[ ]a[ ]mail[ ]exchanger[ ]or[ ]IP[ ]address}o,
-# 	'ambimx' => qr{\ASorry[.][ ]Although I[']m listed as a best[-]preference MX or A for that host[,]}o,
-# };
+my $RxConnError = {
+	'nohost' => qr{\ASorry[,][ ]I[ ]couldn[']t[ ]find[ ]any[ ]host[ ]named[ ]}o,
+	# 'nomxrr' => qr{\ASorry[,][ ]I[ ]couldn[']t[ ]find[ ]a[ ]mail[ ]exchanger[ ]or[ ]IP[ ]address}o,
+	# 'ambimx' => qr{\ASorry[.][ ]Although I[']m listed as a best[-]preference MX or A for that host[,]}o,
+};
 
 #   ____ ____ ____ ____ ____ ____ ____ 
 #  ||M |||e |||t |||h |||o |||d |||s ||
@@ -64,7 +64,7 @@ sub detectus
 	# +-+-+-+-+-+-+-+-+
 	#
 	# @Description	Detect an error from qmail
-	# @Param <ref>	(Ref->MIME::Head) Message header
+	# @Param <ref>	(Ref->Hash) Message header
 	# @Param <ref>	(Ref->String) Message body
 	# @Return	(String) Pseudo header content
 	my $class = shift();
@@ -72,6 +72,7 @@ sub detectus
 	my $mbody = shift();
 
 	my $se5xx = { 'mailfrom' => 0, 'rcptto' => 0, 'data' => 0, 'payload' => 0, };
+	my $ce5xx = { 'nohost' => 0, };
 	my $error = { 'conn' => 0, 'smtp' => 0, };
 
 	my $phead = q();
@@ -85,22 +86,39 @@ sub detectus
 
 	EACH_LINE: foreach my $_qb ( split( qq{\n}, $$mbody ) )
 	{
-		$qmail = 1 if( $_qb =~ $RxQSBMF->{'begin'} );
+		if( ! $qmail && $_qb =~ $RxQSBMF->{'begin'} )
+		{
+			$qmail = 1;
+			next();
+		}
 
 		# The line which begins with the string 'Remote host said:'
-		SMTP_ERROR: foreach my $_se ( keys(%$se5xx) )
+		unless( $error->{'smtp'} )
 		{
-			last() if( $error->{'smtp'} );
-			if( $_qb =~ $RxSMTPError->{$_se} )
+			SMTP_ERROR: foreach my $_se ( keys(%$se5xx) )
 			{
-				$se5xx->{$_se} = 1;
-				$error->{smtp} = 1;
-				last();
+				if( $_qb =~ $RxSMTPError->{$_se} )
+				{
+					$se5xx->{$_se} = 1;
+					$error->{smtp} = 1;
+					last();
+				}
 			}
 		}
 
 		# The line which begins with the string 'Sorry,...'
-		$error->{'conn'} = 1 if( ! $error->{'smtp'} && $_qb =~ $RxQSBMF->{'sorry'} );
+		if( ! $error->{'conn'} && $_qb =~ $RxQSBMF->{'sorry'} )
+		{
+			CONN_ERROR: foreach my $_ce ( keys(%$ce5xx) )
+			{
+				if( $_qb =~ $RxConnError->{$_ce} )
+				{
+					$error->{$_ce} = 1;
+					$error->{conn} = 1;
+					last()
+				}
+			}
+		}
 
 		# Get a mail address from the recipient paragraph.
 		$rcptintxt = $1 if( $rcptintxt eq q() && $_qb =~ m{\A[<](.+[@].+)[>][:]\z} );

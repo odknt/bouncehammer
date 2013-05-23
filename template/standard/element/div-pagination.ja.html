@@ -1,9 +1,12 @@
-[%- SET currentpagenum = pagersinthequery.currentpagenum -%]
-[%- SET resultsperpage = pagersinthequery.resultsperpage -%]
-[%- SET lastpagenumber = pagersinthequery.lastpagenumber -%]
-[%- SET colnameorderby = pagersinthequery.colnameorderby -%]
-[%- SET descendorderby = pagersinthequery.descendorderby -%]
+[%- SET currentpagenum = pagination.currentpagenum -%]
+[%- SET resultsperpage = pagination.resultsperpage -%]
+[%- SET lastpagenumber = pagination.lastpagenumber -%]
+[%- SET colnameorderby = pagination.colnameorderby -%]
+[%- SET descendorderby = pagination.descendorderby -%]
 [%- SET pagesintheline = 10 -%]
+[%- SET firstentry = pagination.offsetposition + 1 -%]
+[%- SET lastentry = pagination.currentpagenum * pagination.resultsperpage -%]
+
 [%- IF contentsname == 'search' -%]
 	[%- SET baseuri = "${scriptname}/search/condition/${encryptedforuri}/${colnameorderby},${descendorderby}" -%]
 [%- ELSIF contentsname == 'table' -%]
@@ -35,15 +38,13 @@
 	[%- END -%]
 [%- END -%]
 [%- SET availablepages = [ pp_start .. pp_endby ] -%]
-
-<div class = 'lhs'>&nbsp;</div>
-<div class = 'rhs'>
-	[%- IF pagersinthequery.totalentries > 0 -%]
+<div class = 'summary'>
+	[%- IF pagination.count > 0 -%]
 		検索結果
-		[%- IF pagersinthequery.totalentries > 1 -%]
-			<strong>[% pagersinthequery.totalentries %]</strong> 件中
-			<strong>[% pagersinthequery.firstentry %]</strong> 件目から
-			<strong>[% pagersinthequery.lastentry %]</strong>件目
+		[%- IF pagination.count > 1 -%]
+			<strong>[% pagination.count %]</strong> 件中
+			<strong>[% firstentry %]</strong> 件目から
+			<strong>[% lastentry %]</strong>件目
 		[%- ELSE -%]
 			<strong>1</strong>件
 		[%- END -%]
@@ -51,17 +52,30 @@
 		<strong>検索条件に一致する結果なし</strong>
 	[%- END -%]
 </div>
+<div class = 'lhs'>
+	[%- IF lastpagenumber > 1 -%]
+		[%- IF currentpagenum > 1 -%]
+			&nbsp;<a href = '[% baseuri %]/[% currentpagenum - 1 %]/[% resultsperpage %]'><strong>前</strong></a>&nbsp;
+		[%- END -%]
+	[%- END -%]
+</div>
+<div class = 'rhs'>
+	[%- IF lastpagenumber > 1 -%]
+		[%- IF currentpagenum < lastpagenumber -%]
+			&nbsp;<a href = '[% baseuri %]/[% currentpagenum + 1 %]/[% resultsperpage %]'><strong>次</strong></a>&nbsp;
+		[%- END -%]
+	[%- END -%]
+</div>
 <div class = 'mid'>
 	[%- IF lastpagenumber > 1 -%]
 		[%- IF currentpagenum > 1 -%]
-			<a href = '[% baseuri %]/[% currentpagenum - 1 %]/[% resultsperpage %]'><strong>前</strong></a>&nbsp;
 			[%- IF currentpagenum > ( ( pagesintheline / 2 ) + 1 ) -%]
 				<a href = '[% baseuri %]/1/[% resultsperpage %]'>1</a>&nbsp;..&nbsp;
 			[%- END -%]
 		[%- END -%]
-						
+
 		[%- FOREACH PP IN availablepages -%]
-			[%- IF PP == pagersinthequery.currentpagenum -%]
+			[%- IF PP == pagination.currentpagenum -%]
 				<span class = 'thispage'>&nbsp;<strong>[% PP %]</strong>&nbsp;</span>&nbsp;
 			[%- ELSE -%]
 				<a href = '[% baseuri %]/[% PP %]/[% resultsperpage %]'>[% PP %]</a>&nbsp;
@@ -72,9 +86,6 @@
 			[%- IF ( pp_endby + 1 ) < lastpagenumber -%]
 				.. <a href = '[% baseuri %]/[% lastpagenumber %]/[% resultsperpage %]'>[% lastpagenumber %]</a>&nbsp;
 			[%- END -%]
-			<a href = '[% baseuri %]/[% currentpagenum + 1 %]/[% resultsperpage %]'><strong>次</strong></a>
 		[%- END -%]
-	[%- ELSE -%]
-		&nbsp;
 	[%- END -%]
 </div>

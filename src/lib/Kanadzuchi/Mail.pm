@@ -1,4 +1,4 @@
-# $Id: Mail.pm,v 1.19 2010/04/01 08:02:12 ak Exp $
+# $Id: Mail.pm,v 1.22 2010/05/25 09:43:32 ak Exp $
 # -Id: Message.pm,v 1.1 2009/08/29 07:32:59 ak Exp -
 # -Id: BounceMessage.pm,v 1.13 2009/08/21 02:43:14 ak Exp -
 # Copyright (C) 2009,2010 Cubicroot Co. Ltd.
@@ -23,6 +23,7 @@ use warnings;
 use Kanadzuchi::String;
 use Kanadzuchi::Address;
 use Kanadzuchi::Metadata;
+use Kanadzuchi::Time;
 use Time::Piece;
 
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
@@ -142,6 +143,7 @@ sub new
 	DATE_AND_TIME: {
 		last() unless( defined($argvs->{'bounced'}) );
 		last() if( ref($argvs->{'bounced'}) eq q|Time::Piece| );
+		last() unless( $argvs->{'bounced'} =~ m{\A\d+\z} );
 		last() if( $argvs->{'bounced'} < 0 || $argvs->{'bounced'} > (2 ** 32) );
 		$argvs->{'bounced'} = new Time::Piece( $argvs->{'bounced'} );
 	}
@@ -185,13 +187,14 @@ sub new
 					require Kanadzuchi::Mail::Group::Neighbor;
 					require Kanadzuchi::Mail::Group::JP::Cellphone;
 					require Kanadzuchi::Mail::Group::JP::Smartphone;
+					require Kanadzuchi::Mail::Group::JP::WebMail;
 					require Kanadzuchi::Mail::Group::WebMail;
 				};
 
 				my $tmpcn = q();
 				my $tmpci = {};
 
-				foreach my $c ( 'Neighbor', 'JP::Cellphone', 'JP::Smartphone', 'WebMail' )
+				foreach my $c ( 'Neighbor', 'JP::Cellphone', 'JP::Smartphone', 'JP::WebMail', 'WebMail' )
 				{
 					$tmpcn = q|Kanadzuchi::Mail::Group::|.$c;
 					$tmpci = $tmpcn->detectus($dpart);
@@ -365,6 +368,37 @@ sub rname2id
 	return(values(%$ReasonWhy)) if( $rname eq q{@} );
 	return(0) unless( $rname );
 	return( $ReasonWhy->{$rname} || 0 );
+}
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
+# ||I |||n |||s |||t |||a |||n |||c |||e |||       |||M |||e |||t |||h |||o |||d |||s ||
+# ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+sub damn
+{
+	#+-+-+-+-+
+	#|d|a|m|n|
+	#+-+-+-+-+
+	#
+	# @Description	Damn, Object to hash reference
+	# @Param	<None>
+	# @Return	(Ref->Hash)
+	my $self = shift();
+	my $damn = {};
+	my $astr = [ qw(token reason hostgroup provider frequency destination senderdomain) ];
+	my $aobj = [ qw(addresser recipient) ];
+
+	map { $damn->{$_} = $self->{$_} if( exists($self->{$_}) ) } @$astr;
+	map { $damn->{$_} = $self->{$_}->address if( ref($self->{$_}) eq q|Kanadzuchi::Address| ) } @$aobj;
+
+	$damn->{'bounced'} = $self->{'bounced'}->epoch() if( ref($self->{'bounced'}) eq q|Time::Piece| );
+	$damn->{'description'} = ${ Kanadzuchi::Metadata->to_string($self->{'description'}) };
+	$damn->{'diagnosticcode'} = $self->{'description'}->{'diagnosticcode'};
+	$damn->{'deliverystatus'} = $self->{'description'}->{'deliverystatus'};
+	$damn->{'timezomeoffset'} = Kanadzuchi::Time->second2tz($self->{'description'}->{'timezoneoffset'});
+
+	return($damn);
 }
 
 1;

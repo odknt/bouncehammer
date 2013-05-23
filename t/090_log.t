@@ -1,4 +1,4 @@
-# $Id: 090_log.t,v 1.6 2010/03/19 04:05:46 ak Exp $
+# $Id: 090_log.t,v 1.8 2010/05/23 05:42:39 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -64,13 +64,13 @@ foreach my $fmt ( 'json', 'yaml' )
 
 			$TD->mkpath() unless( -e $TD->stringify() );
 			$MR = Kanadzuchi::Mail::Bounced->eatit( 
-				\$KP, { cache => $TD->stringify(), 'greed' => 1, 'verbose' => 0 } );
+				$KP, { cache => $TD->stringify(), 'greed' => 1, 'verbose' => 0 } );
 
-			isa_ok( $MR, q|ARRAY| );
+			isa_ok( $MR, q|Kanadzuchi::Iterator| );
 		}
 
-		$L->instance->entities( $MR );
-		$L->instance->count( $#{$MR} + 1 );
+		$L->instance->entities( $MR->all() );
+		$L->instance->count( $MR->count() );
 	}
 
 	LOG_INSTANCE: {

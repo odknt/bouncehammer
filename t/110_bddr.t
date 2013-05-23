@@ -1,4 +1,4 @@
-# $Id: 100_rdb.t,v 1.4 2010/02/17 10:09:21 ak Exp $
+# $Id: 110_bddr.t,v 1.1 2010/05/17 00:00:55 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -8,10 +8,9 @@ use lib qw(./t/lib ./dist/lib ./src/lib);
 use strict;
 use warnings;
 use Kanadzuchi::Test;
-use Kanadzuchi::RDB;
-use Kanadzuchi::RDB::Schema;
+use Kanadzuchi::BdDR;
 use JSON::Syck;
-use Test::More ( tests => 345 );
+use Test::More ( tests => 429 );
 
 #  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 # ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -19,9 +18,9 @@ use Test::More ( tests => 345 );
 # |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|
 #
 my $T = new Kanadzuchi::Test(
-	'class' => q|Kanadzuchi::RDB|,
-	'methods' => [ 'new', 'setup', 'makecache' ],
-	'instance' => new Kanadzuchi::RDB(),
+	'class' => q|Kanadzuchi::BdDR|,
+	'methods' => [ 'new', 'setup', 'connect', 'disconnect', 'DESTROY' ],
+	'instance' => new Kanadzuchi::BdDR(),
 );
 
 #  ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
@@ -37,30 +36,23 @@ PREPROCESS: {
 METHODS: {
 	my $object = undef();
 	my $config = JSON::Syck::LoadFile( q{./src/etc/prove.cf} );
-	my $therdb = $T->tempdir().q{/test.db};
+	my $therdb = q(:memory:);
 	my $datasn = q();
 	my $rdbset = {
 		'PostgreSQL' => { 'driver' => 'Pg', 'port' => 5432, 'short' => 'p', },
 		'MySQL' => { 'driver' => 'mysql', 'port' => 3306, 'short' => 'm', },
-		'Sybase' => { 'driver' => 'Sybase', 'port' => 4100, 'short' => 'y', },
 		'SQLite' => { 'driver' => 'SQLite', 'port' => undef(), 'short' => 's', 'dbname' => $therdb },
 	};
 
 	foreach my $d ( keys(%$rdbset) )
 	{
-		$object = new Kanadzuchi::RDB();
+		$object = new Kanadzuchi::BdDR();
 		$config->{'database'}->{'hostname'} = q(127.0.0.1);
 		$config->{'database'}->{'dbname'} = $rdbset->{$d}->{'dbname'} || q(bouncehammer) ;
 		$config->{'database'}->{'username'} = q(bouncehammer);
 		$config->{'database'}->{'password'} = q(kanadzuchi);
 		$config->{'database'}->{'port'} = $rdbset->{$d}->{'port'};
 		$config->{'database'}->{'dbtype'} = $d;
-
-		CONSTRUCTOR: {
-			isa_ok( $object->records(), q|ARRAY|, q{->records()} );
-			isa_ok( $object->cache(), q|HASH|, q{->cache()} );
-			is( $object->count(), 0, q{->count() = 0} );
-		}
 
 		SETUP: {
 			ok( $object->setup( $config->{'database'}, q{->setup()} ) );
@@ -75,29 +67,22 @@ METHODS: {
 		}
 
 		CONNECT: {
-			$object->handle( 
-				Kanadzuchi::RDB::Schema->connect(
-					$object->datasn(), $object->username(), $object->password() )
-			);
-			isa_ok( $object->handle(), q|Kanadzuchi::RDB::Schema|, q{->handle() = }.$object->handle() );
-
-
-			foreach my $sn ( $object->handle->sources() )
+			if( $d eq 'SQLite' )
 			{
-				use_ok( 'Kanadzuchi::RDB::Schema::'.$sn );
+				my $dbhx = $object->connect();
+				isa_ok( $dbhx, q|DBI::db|, q{->connect(SQLite)} );
+				my $dbhs = $object->disconnect();
+				ok( $dbhs, q{->disconnect(SQLite)} );
 			}
-		}
-
-		MAKECACHE: {
-			# FFR: 
-			;
 		}
 
 		FAIL: {
 			foreach my $e ( @{$Kanadzuchi::Test::ExceptionalValues} )
 			{
 				my $argv = defined($e) ? sprintf("%#x", ord($e)) : 'undef()';
-				is( $object->setup( $e ), 0, q{->setup() = }.$argv );
+				my $dbio = Kanadzuchi::BdDR->new->setup($e);
+				is( ref($dbio), $T->class(), q{->setup() = }.$argv );
+				is( $dbio->datasn(), undef(), q{->setup->datasn() = ''} );
 			}
 		}
 	}

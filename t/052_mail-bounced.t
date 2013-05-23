@@ -1,4 +1,4 @@
-# $Id: 052_mail-bounced.t,v 1.2 2010/02/19 14:32:59 ak Exp $
+# $Id: 052_mail-bounced.t,v 1.6 2010/05/23 05:42:39 ak Exp $
 #  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
 # ||L |||i |||b |||r |||a |||r |||i |||e |||s ||
 # ||__|||__|||__|||__|||__|||__|||__|||__|||__||
@@ -15,7 +15,7 @@ use Kanadzuchi::RFC2822;
 use Kanadzuchi::String;
 use Kanadzuchi::Time;
 use Path::Class::Dir;
-use Test::More ( tests => 1564 );
+use Test::More ( tests => 1640 );
 
 #  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ 
 # ||G |||l |||o |||b |||a |||l |||       |||v |||a |||r |||s ||
@@ -51,6 +51,7 @@ CALL_PARSER: {
 	my $mesgtoken = q();
 	my $addresser = q();
 	my $recipient = q();
+	my $damnedobj = {};
 
 	is( $ZciParser->slurpit(), $nMessages, q|Kanadzuchi::Mbox->slurpit()| );
 	is( $ZciParser->nmails(), $nMessages, q{The number of emails = }.$nMessages );
@@ -59,12 +60,16 @@ CALL_PARSER: {
 	is( $ZciParser->nmesgs(), $nMessages, q{The number of messages = }.$nMessages );
 	isa_ok( $ZciParser->messages(), q|ARRAY| );
 
-	$ReturnedMesg = $T->class->eatit( \$ZciParser, { 
+	$ReturnedMesg = $T->class->eatit( $ZciParser, { 
 				'cache' => $T->tempdir()->stringify(), 
 				'greed' => 1, 'verbose' => 0 } );
+	isa_ok( $ReturnedMesg, q|Kanadzuchi::Iterator| );
+	is( $ReturnedMesg->count(), $nMessages, '->count() = '.$nMessages );
 
-	PARSE: foreach my $_p ( @$ReturnedMesg )
+	PARSE: while( my $_p = $ReturnedMesg->next() )
 	{
+		isa_ok( $_p, $T->class() );
+
 		EMAIL_ADDRESS: {
 			isa_ok( $_p, $T->class );
 			isa_ok( $_p->addresser(), q|Kanadzuchi::Address| );
@@ -164,11 +169,13 @@ CALL_PARSER: {
 		}
 
 		is( $_p->frequency(), 1, q{->frequency() == 1} );
+
+		DAMNED: {
+			$damnedobj = $_p->damn();
+			isa_ok( $damnedobj, q|HASH|, '->damn()' );
+		}
 	}
 }
 
-POSTPROCESS: {
-	$T->tempdir()->rmtree() if( -w $T->tempdir()->stringify() );
-}
 
 __END__

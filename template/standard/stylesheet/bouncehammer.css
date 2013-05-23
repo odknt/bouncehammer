@@ -1,4 +1,4 @@
-/* $Id: bouncehammer.css,v 1.9 2010/03/29 04:37:01 ak Exp $ */
+/* $Id: bouncehammer.css,v 1.11 2010/05/25 23:53:08 ak Exp $ */
 /* Copyright 2009,2010 Cubicroot Co. Ltd. */
 
 /* IDs */
@@ -118,7 +118,7 @@ div,span,form,input {
 body {
 	font-family: 'Trebuchet MS', sans-serif;
 	font-size: 11px;
-	color: #383c3c; /* Youkan-iro */
+	color: #474a4d; /* Aisumicha */
 	text-align: center;
 	vertical-align: middle;
 	margin: 2px;
@@ -407,6 +407,19 @@ div.result p.exception {
 	background: #e2041b; /* Shoujouhi */
 	color: #fffffc; /* Gofun-iro */
 	font-weight: bold;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	-opera-border-radius: 4px;
+}
+
+div.errormessage {
+	margin: 4px 1px;
+	padding: 4px;
+	background: #e2041b; /* Shoujouhi */
+	color: #fffffc; /* Gofun-iro */
+	font-size: 11px;
+	font-weight: bold;
+	text-align: left;
 	-webkit-border-radius: 4px;
 	-moz-border-radius: 4px;
 	-opera-border-radius: 4px;

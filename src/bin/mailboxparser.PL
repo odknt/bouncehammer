@@ -1,5 +1,5 @@
 #__PERLEXECUTABLE__
-# $Id: mailboxparser.PL,v 1.21 2010/04/16 06:53:23 ak Exp $
+# $Id: mailboxparser.PL,v 1.31 2010/05/25 23:55:01 ak Exp $
 # -Id: mailboxparser.PL,v 1.21 2010/02/21 20:09:01 ak Exp -
 # -Id: mailboxparser.PL,v 1.2 2009/09/30 03:20:26 ak Exp -
 # -Id: mailboxparser.PL,v 1.16 2009/08/27 05:09:59 ak Exp -
@@ -61,6 +61,7 @@ my $CLIOPTION = {
 	'backup'	=> ( 1 << 7 ),
 	'greed'		=> ( 1 << 8 ),
 	'safe'		=> ( 1 << 9 ),
+	'batch'		=> ( 1 << 10 ),
 };
 
 #  __  __    _    ___ _   _ 
@@ -117,12 +118,16 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 	require Digest::MD5;
 	require IO::File;
 
+	my $howmanymboxes = 0;		# (Integer) How many mailbox files
+	my $sizeofmailbox = 0;		# (Integer) Total size of mailboxes
+	my $parseprogress = undef();	# (Term::ProgressBar) Progress bar object
+	my $progressbarcr = sub {};	# (Ref->Code) Term::ProgressBar
+	my $debugmessages = q();	# (String) Debug message for Term::ProgressBar
 	my $chunksofemail = [];		# (Ref->Array) Path::Class::File objects
-	my $chunkmboxsize = ($Zci->config->{'file'}->{'maxsize'} * 0.20787 ) || 33554432;
-	my $seekprogressx = undef();
+	my $chunkmboxsize = ( $Zci->config->{'file'}->{'maxsize'} * 0.08 ) || 1048576;
 
 	$chunkmboxsize = 102400 if( $chunkmboxsize < 102400 );		# 100 KB
-	$chunkmboxsize = 33554432 if( $chunkmboxsize > 33554432 );	# 32 MB
+	$chunkmboxsize = 1048576 if( $chunkmboxsize > 1048576 );	# 1 MB
 
 	# Set timeout(ALRM) for reading from STDIN
 	eval { alarm( ( $Zci->config->{'environment'}->{'timeout'} || 180 ) ) };
@@ -132,14 +137,8 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 	{
 		# Read from the directory(Maildir)
 		my $pseudofrom = q(From MAILER-DAEMON Sun Dec 31 23:59:59 2000).qq(\n);
-		my $tmpmailbox;		# (Path::Class::File) Temporary mailbox
-		my $mboxhandle;		# (IO::File) object for a temporary mailbox
-		my $directoryh;		#
-		my $mfcontents;		# (String) Contents of the mailbox
-		my $filedigest;		# (String) MD5 digest of each file
+		my $directoryh;		# (GLob) Directory handle
 		my $filesindir = 0;	# (Integer) The number of files in the directory
-		my $first5char = q();	# (String) First 5 characters
-		my $md5digests = [];	# (Ref->Array) MD5 Digest hash values of each file
 
 		$Cmd->d( 2, sprintf( "Max size of each chunk = %d bytes\n", $chunkmboxsize ));
 
@@ -159,27 +158,38 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 				next() if( -z $d.'/'.$mf || ! -r _ || ! -f _ || ! -T _ || ! -s _ );
 				push( @{ $Mail->{'files'} }, $d.'/'.$mf );
 				$filesindir++;
+				alarm(0);
 			}
 			closedir( $directoryh );
 
 		} # End of foreach(SEEK_EACH_DIRECTORY) 
 
-		$Cmd->d( 1, sprintf( "The number of files in the directories = %d\n", $filesindir ));
+		$Cmd->d( 1, sprintf( "The number of files in the directories = %d\n", $filesindir )) if( $filesindir );
 		$Cmd->e('There is no valid email in the directories') unless( scalar(@{$Mail->{'files'}}) );
 
+
+
+		my $tmpmailbox;		# (Path::Class::File) Temporary mailbox
+		my $mboxhandle;		# (IO::File) object for a temporary mailbox
+		my $mfcontents;		# (String) Contents of the mailbox
+		my $filedigest;		# (String) MD5 digest of each file
+		my $first5char = q();	# (String) First 5 characters
+		my $md5digests = [];	# (Ref->Array) MD5 Digest hash values of each file
+
+		# Create progress bar object if it is verbose mode
 		if( scalar(@{$Mail->{'files'}}) && $Cmd->debuglevel > -1 )
 		{
 			eval { require Term::ProgressBar; };
-			$seekprogressx = new Term::ProgressBar( { 
+			$parseprogress = new Term::ProgressBar( { 
 						'fh' => \*STDERR,
-						'ETA' => q(linear),
-						'name' => q(Seek mailboxes),
-						'count' => scalar(@{$Mail->{'files'}}),
+						'ETA' => 'linear',
+						'name' => 'Seek mailboxes',
+						'count' => scalar @{ $Mail->{'files'} },
 					});
+			$progressbarcr = sub { $parseprogress->update() };
 		}
 
-
-		SEEK_EACH_FILE: foreach my $mf ( @{$Mail->{'files'}} )
+		SEEK_EACH_FILE: while( my $mf = shift @{$Mail->{'files'}} )
 		{
 			#  _____ _ _           
 			# |  ___(_) | ___  ___ 
@@ -187,11 +197,11 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 			# |  _| | | |  __/\__ \
 			# |_|   |_|_|\___||___/
 			#                      
-			$seekprogressx->update() if( defined($seekprogressx) );
+			$progressbarcr->();
 			next() if( -z $mf || ! -s _ );
 
 			$filedigest = Digest::MD5->new->addfile(new IO::File(q{< }.$mf))->hexdigest();
-			next() if( grep( m{\A$filedigest\z}, @$md5digests ) );
+			next() if( grep( { $_ eq $filedigest } @$md5digests ) );
 			push( @$md5digests, $filedigest );
 
 			unless( $mboxhandle )
@@ -218,6 +228,8 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 			print( $mboxhandle $pseudofrom ) if( $first5char ne 'From ' );
 			print( $mboxhandle $mfcontents ) if( $mfcontents );
 			$_eachmailfh->close() if( $_eachmailfh );
+			$sizeofmailbox += -s $mf;
+			$howmanymboxes++;
 			alarm(0);
 
 			# Cleanup
@@ -249,15 +261,16 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 		$filedigest = undef();
 		$md5digests = [];
 	}
+	
+	if( defined($parseprogress) )
+	{
+		$debugmessages = $Cmd->d( 2, sprintf( "Size of all mailboxes = %d bytes\n", $sizeofmailbox ));
+		$parseprogress->message( $debugmessages ) if( $debugmessages );
+	}
 
 
 	my $kanadzuchilog = new Kanadzuchi::Log();
-	my $templogdevice;		# (IO::File) Temporary log
-	my $mailboxparser;		# (Kanadzuchi::Mbox) Parser object
-	my $returnedmesgs = [];		# (Ref->Array) Kanadzuchi::Mail::Bounced objects
-	my $stageofparser = 0;		# (Integer) Present state number
-	my $msgsintheklog = 0;		# (Integer) The number of parsed messages
-	my $msgsinthembox = 0;		# (Integer) The number of emails in the mbox
+	my $templogdevice = undef();	# (IO::File) Temporary log
 
 	if( $Cmd->operation & $Cmd->option->{'log'} )
 	{
@@ -289,34 +302,52 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 		$kanadzuchilog->logfile->lock();
 		$kanadzuchilog->device( $templogdevice );
 
-		$Cmd->d(1,sprintf( "[This process] Log directory = %s\n", $Out ));
-		$Cmd->d(1,sprintf( "[This process] Temporary log = %s\n", $kanadzuchilog->logfile() ));
+		if( defined($parseprogress) )
+		{
+			$debugmessages = $Cmd->d(1,sprintf( "Log directory = %s\n", $Out ));
+			$parseprogress->message( $debugmessages ) if( $debugmessages );
+			$debugmessages = $Cmd->d(1,sprintf( "Temporary log = %s\n", $kanadzuchilog->logfile() ));
+			$parseprogress->message( $debugmessages ) if( $debugmessages );
+		}
 	}
 
 
 	push( @$chunksofemail, q|<STDIN>| ) unless( scalar(@$chunksofemail) );
-	$Cmd->d(1,sprintf( "[This Process] Safe parse\n", $Out )) if($Cmd->operation & $Cmd->option->{'safe'} );
-
-	PARSE_CHUNKS_OF_EMAIL: foreach my $Mbox ( @$chunksofemail )
+	if( defined($parseprogress) && $Cmd->operation & $Cmd->option->{'safe'} )
 	{
-		#  ____                          
-		# |  _ \ __ _ _ __ ___  ___ _ __ 
-		# | |_) / _` | '__/ __|/ _ \ '__|
-		# |  __/ (_| | |  \__ \  __/ |   
-		# |_|   \__,_|_|  |___/\___|_|   
-		#                                
+		$debugmessages = $Cmd->d(1,sprintf( "Safe parse\n", $Out ));
+		$parseprogress->message( $debugmessages ) if( $debugmessages );
+	}
+
+
+	my $howmanyemails = 0;		# (Integer) How many email messages
+	my $howmanybounce = 0;		# (Integer) How many bounce messages
+	my $howmanyparsed = 0;		# (Integer) How many parsed messages
+	my $parseroptions = {		# (Ref->Hash) Options of K::M::Bounced->eatit()
+			'cache' => $Cmd->tmpdir(), 
+			'verbose' => $Cmd->debuglevel(), 
+			'skip' => $Skip,
+			'fast' => ( $Cmd->operation() & $Cmd->option->{'safe'} ? 0 : 1 ), };
+
+	PARSE_CHUNKS_OF_EMAIL: while( my $Mbox = shift @$chunksofemail )
+	{
+		my $mailboxparser;		# (Kanadzuchi::Mbox) Parser object
+		my $mboxpiterator;		# (Kanadzuchi::Iterator) Kanadzuchi::Mail::Bounced objects
+
 		if( $Mbox ne q|<STDIN>| )
 		{
 			$mailboxparser = new Kanadzuchi::Mbox( 'file' => $Mbox->stringify() );
+			alarm(0);	# Reset alarm
 		}
 		else
 		{
 			# Read the mailbox From STDIN
 			$mailboxparser = new Kanadzuchi::Mbox();
-			$Mbox = undef();
+			$debugmessages = $Cmd->d(1, 'Waiting for data from STDIN..., timeout = '
+						.( $Zci->config->{'environment'}->{'timeout'} || 180 ) );
+			$parseprogress->message( $debugmessages ) if( $parseprogress && $debugmessages );
+			undef($Mbox);
 		}
-
-		$stageofparser++;
 
 		#  ____  _    _   _ ____  ____  
 		# / ___|| |  | | | |  _ \|  _ \ 
@@ -326,18 +357,29 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 		# 
 		# Slurp the mailbox
 		$mailboxparser->greed( $Cmd->operation & $Cmd->option->{'greed'} ? 1 : 0 );
-		$mailboxparser->slurpit();
+		$mailboxparser->slurpit() || next();
+		$howmanyemails += $mailboxparser->nmails();
 
-		# Reset alarm(Read from STDIN)
-		alarm(0);
+		# Progress bar for each parser
+		if( $Cmd->debuglevel > -1 )
+		{
+			eval { require Term::ProgressBar; };
+			$parseprogress = new Term::ProgressBar( { 
+						'fh' => \*STDERR,
+						'ETA' => 'linear',
+						'name' => 'Parse mailboxes('.(scalar(@$chunksofemail) + 1).')',
+						'count' => $mailboxparser->nmails() * 2,
+					});
+		}
 
-		# Put decided configuration values as debug message
-		$Cmd->d(1,sprintf( "[Stage: #%04d] Mailbox file = %s(%d Bytes)\n", $stageofparser, (
-						defined($Mbox)
-						? ( $Mbox->stringify(), -s $Mbox->stringify() )
-						: ( '<STDIN>', -1 ) )
-					));
-		next() unless( $mailboxparser->nmails() );
+		#  ____                          
+		# |  _ \ __ _ _ __ ___  ___ _ __ 
+		# | |_) / _` | '__/ __|/ _ \ '__|
+		# |  __/ (_| | |  \__ \  __/ |   
+		# |_|   \__,_|_|  |___/\___|_|   
+		#                                
+		$mailboxparser->parseit( $progressbarcr ) || next();
+		$howmanybounce += $mailboxparser->nmesgs();
 
 		#  _____    _  _____   ___ _____ 
 		# | ____|  / \|_   _| |_ _|_   _|
@@ -345,27 +387,16 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 		# | |___ / ___ \| |    | |  | |  
 		# |_____/_/   \_\_|   |___| |_|  
 		# 
-		# Parse the mailbox 
-		$mailboxparser->parseit();
-
 		# Call Kanadzuchi::Mail::Bounced->eatit()
-		$returnedmesgs = Kanadzuchi::Mail::Bounced->eatit( 
-					\$mailboxparser, {
-						'cache' => $Cmd->tmpdir(), 
-						'verbose' => $Cmd->debuglevel(), 
-						'skip' => $Skip,
-						'fast' => ( $Cmd->operation() & $Cmd->option->{'safe'} ? 0 : 1 ), } );
-
-		$Cmd->d( 1, sprintf( "[Stage: #%04d] Parsed Messages/emails in the mailbox = %d/%d\n", 
-					$stageofparser, scalar(@$returnedmesgs), $mailboxparser->nmails() )); 
-		$msgsinthembox += $mailboxparser->nmails();
-		$msgsintheklog += scalar(@$returnedmesgs);
+		$mboxpiterator = Kanadzuchi::Mail::Bounced->eatit( $mailboxparser, $parseroptions, $progressbarcr );
+		$howmanyparsed += $mboxpiterator->count();
+		$parseprogress->update( $mailboxparser->nmails * 2 ) if( $parseprogress );
 
 		# There is no parsed messages
-		next() unless( scalar(@{$returnedmesgs}) );
+		next() unless( $mboxpiterator->count() );
 
-		$kanadzuchilog->entities( $returnedmesgs );
-		$kanadzuchilog->count( scalar( @$returnedmesgs ) );
+		$kanadzuchilog->entities( $mboxpiterator->all() );
+		$kanadzuchilog->count( $mboxpiterator->count() );
 
 		if( $Cmd->operation & $Cmd->option->{'log'} )
 		{
@@ -394,15 +425,35 @@ if( $Cmd->operation & $Cmd->option->{'parse'} )
 			$kanadzuchilog->dumper();
 		}
 
-
 	} # End of foreach(PARSE_CHUNKS_OF_EMAIL)
 
-	$Cmd->d(0,sprintf( "[This process] Parsed messages/emails in the mailbox = %d/%d\n", $msgsintheklog, $msgsinthembox ));
+	$Cmd->d( 0, sprintf( "Parsed messages/emails(ratio) in the mailbox = %d/%d (%.4f)\n",
+			$howmanyparsed, $howmanybounce, $howmanybounce == 0 ? 0 : ($howmanyparsed / $howmanybounce) ));
+
 	if( ref($kanadzuchilog->device()) eq q|IO::File| && $kanadzuchilog->logfile() )
 	{
 		$kanadzuchilog->device->close();
 		$kanadzuchilog->logfile->unlock() if( $kanadzuchilog->logfile->locked() );
 		$kanadzuchilog->logfile->remove() if( -f $kanadzuchilog->logfile && ! -s _ );
+	}
+
+	if( $Cmd->operation & $Cmd->option->{'batch'} )
+	{
+		# Batch mode, output as a block style YAML format
+		my $batchinfo = q();
+
+		$batchinfo .= sprintf( qq|  all-of-mailbox-files: %d\n|, $howmanymboxes );
+		$batchinfo .= sprintf( qq|  size-of-mailboxes:    %d\n|, $sizeofmailbox );
+		$batchinfo .= sprintf( qq|  temporary-log-file:   "%s"\n|, -f $kanadzuchilog->logfile ? $kanadzuchilog->logfile : 'NA' );
+		$batchinfo .= sprintf( qq|  messages:\n| );
+		$batchinfo .= sprintf( qq|    all-of-emails:   %d\n|, $howmanyemails );
+		$batchinfo .= sprintf( qq|    bounce-messages: %d\n|, $howmanybounce );
+		$batchinfo .= sprintf( qq|    parsed-messages: %d\n|, $howmanyparsed );
+		$batchinfo .= sprintf( qq|    ratio:\n| );
+		$batchinfo .= sprintf( qq|      content-rate-for-bounce: %.4f\n|, $howmanyemails == 0 ? 0: ( $howmanybounce / $howmanyemails ) );
+		$batchinfo .= sprintf( qq|      analytical-accuracy:     %.4f\n|, $howmanybounce == 0 ? 0: ( $howmanyparsed / $howmanybounce ) );
+
+		$Cmd->batchstatus(\$batchinfo);
 	}
 
 }
@@ -430,6 +481,7 @@ sub parse_options
 
 	# Variables for decide operation
 	my (
+		$_opt_batch,
 		$_opt_conf,
 		$_opt_format,
 		$_opt_greed,
@@ -440,7 +492,6 @@ sub parse_options
 		$_opt_truncate,
 		$_opt_backup,
 		$_opt_verbose,
-		$_opt_silent,
 		$_opt_safe,
 		$_opt_skip,
 		$_opt_skip_temperror,
@@ -455,6 +506,8 @@ sub parse_options
 	Getopt::Long::GetOptions(
 			'2'		=> \$_opt_2way,
 			'two-way'	=> \$_opt_2way,
+			'B'		=> \$_opt_batch,
+			'batch'		=> \$_opt_batch,
 			'backup=s'	=> \$_opt_backup,
 			'conf=s'	=> \$_opt_conf,
 			'C=s'		=> \$_opt_conf,
@@ -479,16 +532,15 @@ sub parse_options
 			'T'		=> \$_opt_test,
 			'truncate'	=> \$_opt_truncate,
 			'help'		=> sub { help(); exit(0); },
-			'silent'	=> \$_opt_silent,
+			'silent'	=> sub { $Cmd->silent(1); },
 			'verbose'	=> \$_opt_verbose,
 			'v+'		=> \$_opt_verbose,
 			'version'	=> sub { printf(STDERR "%s\n", $Zci->version()); exit(0); },
 		);
 
 
-	# (verbose|debug|silent) mode
+	# (verbose|debug) mode
 	$Cmd->debuglevel( ( $_opt_verbose ? $_opt_verbose : 0 ) - 1 );
-	$Cmd->silent( $_opt_silent ? 1 : 0 );
 
 	# Specify Config File(YAML)
 	if( defined($_opt_conf) )
@@ -564,7 +616,16 @@ sub parse_options
 	{
 		# Log option
 		$_operation |= $Cmd->option->{'log'};
-		$_operation |= $Cmd->option->{'two-way'} if( $_opt_2way );
+
+		if( $_opt_2way )
+		{
+			$_operation |= $Cmd->option->{'two-way'};
+		}
+		elsif( $_opt_batch )
+		{
+			# Output results as a YAML in batch mode 
+			$_operation |= $Cmd->option->{'batch'};
+		}
 
 		if( defined($_opt_outputdir) && -d $_opt_outputdir && -r _ && -x _ )
 		{
@@ -623,6 +684,7 @@ sub help
 	printf( STDERR "    --backup <dir>      : Backup; move the mailbox to the directory after parsing.\n");
 	printf( STDERR "\n" );
 	printf( STDERR " * OTHER OPTIONS\n" );
+	printf( STDERR "    -B, --batch         : Run in batch mode, results are printed in YAML format.\n");
 	printf( STDERR "    -C, --conf <config> : Location of the configuration file used instead of \n");
 	printf( STDERR "                          __KANADZUCHIETC__/bouncehammer.cf .\n");
 	printf( STDERR "    -T, --test          : Test mode, same as ``-C /path/to/test-run.cf''\n");
